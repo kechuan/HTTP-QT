@@ -1,0 +1,278 @@
+#include "mainwindow.h"
+#include "./ui_mainwindow.h"
+#include "connect.h"
+
+#include "HTMLFliter.h"
+
+#include <QDebug>
+#include <QMessageBox>
+#include <windows.h>
+#include <string>
+
+#include <vector>
+
+
+std::vector<std::string> LinkVector = {};
+std::vector<std::string> PathVector = {};
+std::vector<std::string> NameVector = {};
+std::vector<std::string> SizeVector = {};
+
+QString FullIP;
+int Port;
+
+QString rootPath = "/file";
+QString SurfingPath;
+
+Connect Client1;
+
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow)
+{
+    ui->setupUi(this); //this指向UI自己
+    this->setWindowTitle("test Window"); //标题定义
+
+    //声明其他ui类
+    AboutWindow = new About();
+    AboutWindow->hide();
+
+    QTabWidget *tabWidget_contentShow = ui->tabWidget_contentShow;
+    tabWidget_contentShow->setMovable(true);
+
+    QTreeWidget *Filelist = ui->Filelist;
+    Filelist->setStyleSheet("QHeaderView::section{background:#A3C99FFF;}"); //???QHeaderView
+    Filelist->setContextMenuPolicy(Qt::CustomContextMenu);  //默认值 Default->0
+
+
+    //这个所谓的menu本质上是一个enmu枚举
+
+    //那么setPolicy
+    //description from http://qt5.digitser.top/5.9/zh-CN/qt.html#ContextMenuPolicy-enum
+    /*
+        enum Qt:: ContextMenuPolicy
+        此枚举类型定义 Widget 在展示上下文菜单方面可以采用的各种策略。
+
+        常量  值   描述
+        Qt::NoContextMenu   0   Widget 不提供上下文菜单，上下文菜单的处理被延期到 Widget 的父级。
+        Qt::PreventContextMenu  4   Widget 不提供上下文菜单，且相比 NoContextMenu ，处理 not 被延期到 Widget 的父级。这意味着所有鼠标右键事件保证都被交付给 Widget 本身，透过 QWidget::mousePressEvent ()，和 QWidget::mouseReleaseEvent ().
+        Qt::DefaultContextMenu  1   Widget 的 QWidget::contextMenuEvent () 处理程序被调用。
+        Qt::ActionsContextMenu  2   Widget 显示其 QWidget::actions () 作为上下文菜单。
+        Qt::CustomContextMenu   3   Widget 发射 QWidget::customContextMenuRequested () 信号。
+    */
+
+    /*
+    那么 现在的设置值为3 意味发送了customContextMenuRequested信号
+        这也是为什么要在connect上选择监听customContextMenuRequested(以下简称cr)
+
+    不过还有一个问题:   什么是cr信号具体是什么东西 它携带了什么信息传递?
+
+    在wiki里是这么解释的 [signal] cr(const QPoint &pos)
+
+    也就是说 它实际上携带的是 被触发的位置信息 pos
+    这也意味着 例如在某个widget上触发一个鼠标的左键 可以被得知是在这个widget的 x:? y:?坐标上触发
+    然后已返回 触发了 的信息
+*/
+
+   //规范提示传入的信号类型 最好全部都是简简单单的写个type上去 不需要多余的 类型修饰符 或者是*/&之类 否则会导致可能的内存泄露(以及难看的warning
+
+
+   QObject::connect(ui->pushButton_Connect,SIGNAL(released()),this,SLOT(action_pressed()));
+   QObject::connect(ui->pushButton_Abort,SIGNAL(released()),this,SLOT(action_pressed()));
+   QObject::connect(ui->About,SIGNAL(triggered()),this,SLOT(Tab_pressed()));
+
+   //warning: connect-not-normalized 对于信号与槽 似乎并不需要特别的分配&引用符号 用上普通的方式反而能避免更多的内存开销 真是奇怪
+
+   //**双击下载占位符
+   QObject::connect(Filelist,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(itemAccess(QTreeWidgetItem*,int)));
+
+
+   //customContextMenuRequested -> onCustomContextMenuRequested 颇有种自问自答的感觉 不过意思相当于自定义事件的信号触发 然后由负责处理自定义事件的槽来处理
+   QObject::connect(Filelist,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(showTreeRightMenu(QPoint)));
+
+
+    //需求将QTreeWidget界面下对每个子item添加右键菜单 课是QTreeWidget自带的方法并没有这种设置 怎么办?
+
+   // customContextMenuRequested
+
+
+
+}
+
+void MainWindow::menu_blank()
+{
+    QMessageBox::warning(this,tr("提示"),tr("树的根节点！")); //table returning?
+}
+
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
+void MainWindow::action_pressed(){
+   qDebug() << "action trigger";
+   QTextBrowser *log_view = ui->textBrowser_log;
+   QPushButton *button = (QPushButton*)sender();
+   //将pushbutton触发的信息传递过来 注意这里的QPushButton*是指针函数 这也代表着这是可以被指向的
+   //只是后面的sender()确实没见过 不过以字面意思来看 应该就是指向触发这个行为的按钮
+
+    QString action = button->text();
+
+    //如你所见 因为cpp的switch case天生只能接受数值或者是char 因此无法直接把Qstring给传入进去 那么 只能使用传统的if else组合了
+
+    if(action == "Connect"){
+        qDebug() << "Connect trigger";
+
+        //通过子成员函数arg的QString链接字符串快捷用法 注意 arg本身仅支持右值传入
+        FullIP = QString("%1.%2.%3.%4").arg(ui->lineEdit_IP_1->text(),ui->lineEdit_IP_2->text(),ui->lineEdit_IP_3->text(),ui->lineEdit_IP_4->text());
+        Port = ui->lineEdit_Port->text().toInt();
+
+        log_view->append(R"(<span style=" color:#ffffff;">)"+action+FullIP+":"+ui->lineEdit_Port->text()+R"(</span>)");
+
+        if(Client1.cliPing(FullIP,Port)){
+            std::string Information = Client1.cliFileSurfing(FullIP,Port);
+            HTMLExtract(Information,LinkVector,NameVector);
+
+            ui->Filelist->clear();
+
+            //codeway add TreeItem
+
+            for(int index = 0;index<=NameVector.size()-1;index++){
+                QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
+                QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
+                ui->Filelist->addTopLevelItem(newItem);
+            }
+
+        }
+
+        else{
+            qDebug()<<"ping failed.";
+        }
+        
+
+    }
+
+    else{
+        qDebug() << "Abort trigger";
+
+        log_view->append(R"(<span style=" color:#ffffff;">)"+action+R"(</span>)");
+    }
+
+   
+}
+
+
+
+//对不同情况下右键的树窗口做出不同的响应 
+//先做一个 空白区域的右键吧
+void MainWindow::showTreeRightMenu(QPoint pos){
+    qDebug()<<"right triggered";
+    QMenu *popmenu = new QMenu;
+
+    QAction *item_area = new QAction("item_area"); //QAction?
+    QAction *itemChild_area = new QAction("itemChild_area"); //QAction?
+    QAction *tree_area = new QAction("tree_area"); //QAction?
+    QAction *blank_area = new QAction("blank_area"); //QAction?
+
+
+    this->connect(blank_area,SIGNAL(triggered(bool)),this,SLOT(menu_blank()));
+
+    QTreeWidgetItem *item = ui->Filelist->itemAt(pos); //itemAT?
+
+
+    //当item不为空的时候触发 也就是说必须确切的点击到子项目才会触发
+    if(item){   //开始检索行为
+        switch(item->type()){
+            case root: {qDebug("root point rclicked.");break;}
+            case child: {qDebug("child point rclicked.");break;}
+        }
+    }
+
+    else{
+        if(ui->Filelist->topLevelItemCount() == 0) //无根节点时
+            popmenu->addAction(tree_area);
+        else
+            popmenu->addAction(blank_area);
+
+    }
+
+    //菜单显示在鼠标点击的位置
+    popmenu->move(ui->Filelist->cursor().pos());
+    popmenu->show();
+
+}
+
+void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
+
+//   QString itemIcon = listItem->text(0);
+   QString itemName = listItem->text(1);
+   QString itemSize = listItem->text(2);
+   QString itemLink = listItem->text(3);
+
+   if(itemSize!="—"){
+       qDebug("you clicked a file which size is:%s",itemSize.toStdString().c_str());
+       Client1.cliFileDownload(FullIP,Port,itemLink);
+    }
+
+   else{
+       qDebug("double clicked the itemName %s, it linked is:%s",itemName.toStdString().c_str(),itemLink.toStdString().c_str()); //colnmun指代 子信息
+       std::string Information = Client1.cliFileSurfing(FullIP,Port,itemLink);
+
+       HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
+
+       if(PathVector.size()>1){
+            qDebug("上一级Path:%s",PathVector.at(PathVector.size()-2).c_str());
+            SurfingPath = PathVector.at(PathVector.size()-2).c_str();
+        }
+
+        else{
+            qDebug("上一级Path:/files");
+            SurfingPath = rootPath;
+        }
+
+        // qDebug("%s",Information.c_str());
+
+       ui->Filelist->clear();
+
+
+    //    QList<QString> newItemInformation{"-","..","-",listItem->text(3)+"\\.."};
+        QList<QString> newItemInformation{"-","..","—",SurfingPath};
+        ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+
+        if(itemName==".."&&itemLink==rootPath){
+           qDebug("redirect to the disk select.");
+           ui->Filelist->clear();
+           Information = Client1.cliFileSurfing(FullIP,Port,rootPath);
+           HTMLExtract(Information,LinkVector,NameVector);
+
+           for(int index = 0;index<=NameVector.size()-1;++index){
+               QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),"——",LinkVector.at(index).c_str()};
+               QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
+               ui->Filelist->addTopLevelItem(newItem);
+           }
+
+
+        }
+
+        else{
+           for(int index = 0;index<=SizeVector.size()-1;++index){
+               QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
+               QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
+               ui->Filelist->addTopLevelItem(newItem);
+            }
+       }
+   }
+
+
+
+}
+
+void MainWindow::Tab_pressed(){
+   qDebug() << "action trigger";
+   AboutWindow->show();
+
+//   QMessageBox::information(this, "提示", "已弹窗", QMessageBox::Ok, QMessageBox::NoButton);
+
+}
+
+//test12

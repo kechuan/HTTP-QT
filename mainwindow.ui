@@ -344,6 +344,12 @@
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
          <widget class="QTreeWidget" name="Filelist">
+          <property name="maximumSize">
+           <size>
+            <width>705</width>
+            <height>16777215</height>
+           </size>
+          </property>
           <property name="indentation">
            <number>25</number>
           </property>

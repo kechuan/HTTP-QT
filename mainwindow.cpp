@@ -84,16 +84,17 @@ MainWindow::MainWindow(QWidget *parent)
 
    //**双击下载占位符
    QObject::connect(Filelist,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(itemAccess(QTreeWidgetItem*,int)));
+   QObject::connect(Filelist,SIGNAL(itemPressed(QTreeWidgetItem*,int)),this,SLOT(TreeWidgetItemPressed_Slot(QTreeWidgetItem*,int)));
+
+
 
 
    //customContextMenuRequested -> onCustomContextMenuRequested 颇有种自问自答的感觉 不过意思相当于自定义事件的信号触发 然后由负责处理自定义事件的槽来处理
-   QObject::connect(Filelist,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(showTreeRightMenu(QPoint)));
+   // QObject::connect(Filelist,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(showTreeRightMenu(QPoint)));
 
-
-    //需求将QTreeWidget界面下对每个子item添加右键菜单 课是QTreeWidget自带的方法并没有这种设置 怎么办?
+//需求将QTreeWidget界面下对每个子item添加右键菜单 课是QTreeWidget自带的方法并没有这种设置 怎么办?
 
    // customContextMenuRequested
-
 
 
 }
@@ -102,6 +103,16 @@ void MainWindow::menu_blank()
 {
     QMessageBox::warning(this,tr("提示"),tr("树的根节点！")); //table returning?
 }
+
+void MainWindow::Open(){
+    qDebug("Open Item.");
+}
+
+void MainWindow::Refresh(){
+    qDebug("Refresh Page.");
+}
+
+
 
 
 MainWindow::~MainWindow()
@@ -161,46 +172,63 @@ void MainWindow::action_pressed(){
    
 }
 
+/*思路:
+至少信号应该是 使用QTreeWidgetItem以主体的信号 指传递是通过QTreeWidgetItem itemPressed()
+然后 通过信号触发的函数 以判断为是否右键 右键时再去执行其他行为
+
+在这个过程中 有QTreeWidgetItem主体 也有itemPressed信号量的参与
+然后是生成Qmenu中不可少的 Action添加
+Action中也不可少的 头文件定义
+
+最后 当Action被触发之后 应该有一个信号量去通知Action被触发了 以便执行Action对应的触发函数
+当然 这个过程同样涉及到了 信号与槽
+*/
+
+bool MainWindow::TreeWidgetItemPressed_Slot(QTreeWidgetItem *listItem, int column){
+    if(qApp->mouseButtons() != Qt::RightButton) return false;
 
 
-//对不同情况下右键的树窗口做出不同的响应 
-//先做一个 空白区域的右键吧
-void MainWindow::showTreeRightMenu(QPoint pos){
     qDebug()<<"right triggered";
+
+    QString itemSize = listItem->text(2);
     QMenu *popmenu = new QMenu;
 
-    QAction *item_area = new QAction("item_area"); //QAction?
-    QAction *itemChild_area = new QAction("itemChild_area"); //QAction?
-    QAction *tree_area = new QAction("tree_area"); //QAction?
-    QAction *blank_area = new QAction("blank_area"); //QAction?
+    //trigger Action define.
+    QAction *Refresh = new QAction("Refresh");
+    QAction *Open = new QAction("Open");
 
+    //general way
+    popmenu->addAction(Refresh);
+    QObject::connect(Refresh,SIGNAL(triggered(bool)),this,SLOT(Refresh()));
 
-    this->connect(blank_area,SIGNAL(triggered(bool)),this,SLOT(menu_blank()));
-
-    QTreeWidgetItem *item = ui->Filelist->itemAt(pos); //itemAT?
-
-
-    //当item不为空的时候触发 也就是说必须确切的点击到子项目才会触发
-    if(item){   //开始检索行为
-        switch(item->type()){
-            case root: {qDebug("root point rclicked.");break;}
-            case child: {qDebug("child point rclicked.");break;}
-        }
+     if(itemSize!="—"){
+        //file area
+        qDebug("right clicked the file");
+        popmenu->addAction(Open);
+        
     }
 
     else{
-        if(ui->Filelist->topLevelItemCount() == 0) //无根节点时
-            popmenu->addAction(tree_area);
-        else
-            popmenu->addAction(blank_area);
-
+        //dir area
+        qDebug("right clicked the Dir");
     }
 
-    //菜单显示在鼠标点击的位置
-    popmenu->move(ui->Filelist->cursor().pos());
-    popmenu->show();
+    
+     popmenu->move(ui->Filelist->cursor().pos());
+     popmenu->show();
 
-}
+     return true;
+
+     
+
+     
+     
+     //菜单显示在鼠标点击的位置
+
+
+ }
+
+
 
 void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
@@ -211,7 +239,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
    if(itemSize!="—"){
        qDebug("you clicked a file which size is:%s",itemSize.toStdString().c_str());
-       Client1.cliFileDownload(FullIP,Port,itemLink);
+       Client1.cliFileDownload(FullIP,Port,itemLink,itemName);
     }
 
    else{

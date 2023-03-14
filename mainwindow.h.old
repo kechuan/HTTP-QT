@@ -4,7 +4,6 @@
 #include <QMainWindow>
 #include <QTreeWidgetItem>
 #include "about.h"
-// #include "IPcontorlPanel.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { 
@@ -21,7 +20,6 @@ public:
     ~MainWindow();
 
     About *AboutWindow;
-//    IP_contorlPanel *IP_contorlPanelWindow;
 
 private:
     Ui::MainWindow *ui; //从此Mainwindow下的指代的指针则为ui  MainWindow *ui = new Ui::MainWindow();
@@ -48,14 +46,14 @@ private slots:
     // void Test();
     void Rename();
     void Delete();
-    // void Refresh(); -> cli surfingPath
+    void Refresh();
     void newDir();
 
     //Dir Area
-    // void Open() -> itemAccess
+    // void Open() -> itemAcess
     
     //File Area
-    // void Download(); -> itemAccess
+    void Download();
 
 };
 

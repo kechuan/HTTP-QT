@@ -4,9 +4,15 @@
 #include <QLocale>
 #include <QTranslator>
 
+#include <QtCore/QTextCodec>
+
+//# pragma execution_character_set("GBK")
+
 int main(int argc, char *argv[])
 {
-    system("chcp 65001");
+//    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
+//    system("chcp 65001");
+//    std::locale::global(std::locale("")); //将运行语言切换成本地
     QApplication a(argc, argv);
 
     QTranslator translator;

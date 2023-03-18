@@ -32,7 +32,9 @@ HTTP-QT
 
 
 
-2.上传
+~~2.上传~~
+
+2.1 但是现在只是固定上传
 
 
 
@@ -40,11 +42,37 @@ Problem:
 
 开发相关:
 
-0.想把IP控制台单独做出一个隐藏在上方工具栏的Action触发
+~~0.想把IP控制台单独做出一个隐藏在上方工具栏的Action触发~~
 
-可是我现在还不清楚怎么让另外的一个Widget窗口与主窗口进行数据传输或同步。。
+~~可是我现在还不清楚怎么让另外的一个Widget窗口与主窗口进行数据传输或同步。。~~
 
 
+
+将MainWindow的ui指针抛出给外部的ui使用
+
+> mainwindow.h 引入 subwindow.h 以正常打开subwindow
+>
+> 而subwindow.h 引入 ui_mainwindow.h 以获取 mainwindow的所有ui信息
+>
+> 然后subwindow.h的构造函数 除了基本的QWidget *parent = nullptr
+>
+> 还要添加 Ui::MainWindow *[ptr]
+>
+>  
+>
+> 最后 subwindow.cpp正常引入subwindow.h
+>
+> 不过在构造函数的实现里 不仅要与构造函数的传参匹配
+>
+> 其继承 还需要再添加一份 
+>
+> sub::sub(QWidget\*,Ui::MainWindow\*):QWidget\*,ui(new Ui::sub),\[ptr]([ptr])
+>
+>    
+>
+> 外层指代当前操作的ui 而内层指代哪个ui的信息(也就是`ui_*.h`)
+>
+> 其中 上文所指的nullptr 即空指针的作用都是为了独立打开一个新窗口 而非依靠其他窗口
 
 1.1解决ofstream传输中文名称文件乱码 因为采用mingw的原因 
 

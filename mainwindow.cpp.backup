@@ -22,6 +22,7 @@ int Port;
 
 QString rootPath = "/file";
 QString SurfingPath;
+QString ParentPath;
 
 Connect Client1;
 
@@ -41,6 +42,13 @@ MainWindow::MainWindow(QWidget *parent)
     //声明其他ui类
     AboutWindow = new About();
     AboutWindow->hide();
+
+    // IP_controlPanelWindow = new IP_controlPanel();
+   IP_controlPanelWindow = new IP_controlPanel(this,ui); //? 指定默认值 nullptr
+
+//    IP_controlPanelWindow->setStyleSheet("border: 1px solid black;");
+
+    IP_controlPanelWindow->hide();
 
     QTabWidget *tabWidget_contentShow = ui->tabWidget_contentShow;
     tabWidget_contentShow->setMovable(true);
@@ -85,21 +93,22 @@ MainWindow::MainWindow(QWidget *parent)
    QObject::connect(ui->pushButton_Connect,SIGNAL(released()),this,SLOT(action_pressed()));
    QObject::connect(ui->pushButton_Abort,SIGNAL(released()),this,SLOT(action_pressed()));
    QObject::connect(ui->About,SIGNAL(triggered()),this,SLOT(Tab_pressed()));
+   QObject::connect(ui->IP_controlPanel,SIGNAL(triggered()),this,SLOT(Tab_pressed()));
+
 
    //warning: connect-not-normalized 对于信号与槽 似乎并不需要特别的分配&引用符号 用上普通的方式反而能避免更多的内存开销 真是奇怪
 
    //**双击下载占位符
    QObject::connect(Filelist,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(itemAccess(QTreeWidgetItem*,int)));
 
+   //需求将QTreeWidget界面下对每个子item添加右键菜单 课是QTreeWidget自带的方法并没有这种设置 怎么办?
+
+   //思路:先检测对treewidget的点击 然后检测被点击的item是左键还是右键 右键时执行qMenu
    QObject::connect(Filelist,SIGNAL(itemPressed(QTreeWidgetItem*,int)),this,SLOT(TreeWidgetItem_Menu(QTreeWidgetItem*,int))); //item按下判断触发
-
-
 
 
    //customContextMenuRequested -> onCustomContextMenuRequested 颇有种自问自答的感觉 不过意思相当于自定义事件的信号触发 然后由负责处理自定义事件的槽来处理
    // QObject::connect(Filelist,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(showTreeRightMenu(QPoint)));
-
-//需求将QTreeWidget界面下对每个子item添加右键菜单 课是QTreeWidget自带的方法并没有这种设置 怎么办?
 
    // customContextMenuRequested
 
@@ -108,7 +117,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 //事件声明区
 
-
+//空白区域
 void MainWindow::menu_blank()
 {
     QMessageBox::warning(this,tr("提示"),tr("树的根节点！")); //table returning?
@@ -126,18 +135,18 @@ void MainWindow::action_pressed(){
    //将pushbutton触发的信息传递过来 注意这里的QPushButton*是指针函数 这也代表着这是可以被指向的
    //只是后面的sender()确实没见过 不过以字面意思来看 应该就是指向触发这个行为的按钮
 
-    QString action = button->text();
+    QString buttonName = button->text();
 
     //如你所见 因为cpp的switch case天生只能接受数值或者是char 因此无法直接把Qstring给传入进去 那么 只能使用传统的if else组合了
 
-    if(action == "Connect"){
+    if(buttonName == "Connect"){
         qDebug() << "Connect trigger";
 
         //通过子成员函数arg的QString链接字符串快捷用法 注意 arg本身仅支持右值传入
         FullIP = QString("%1.%2.%3.%4").arg(ui->lineEdit_IP_1->text(),ui->lineEdit_IP_2->text(),ui->lineEdit_IP_3->text(),ui->lineEdit_IP_4->text());
         Port = ui->lineEdit_Port->text().toInt();
 
-        log_view->append(R"(<span style=" color:#ffffff;">)"+action+FullIP+":"+ui->lineEdit_Port->text()+R"(</span>)");
+        log_view->append(R"(<span style=" color:#ffffff;">)"+buttonName+FullIP+":"+ui->lineEdit_Port->text()+R"(</span>)");
 
         if(Client1.cliPing(FullIP,Port)){
             std::string Information = Client1.cliFileSurfing(FullIP,Port);
@@ -153,6 +162,8 @@ void MainWindow::action_pressed(){
                 ui->Filelist->addTopLevelItem(newItem);
             }
 
+            ui->pushButton_Connect->setEnabled(false);
+
         }
 
         else{
@@ -165,7 +176,8 @@ void MainWindow::action_pressed(){
     else{
         qDebug() << "Abort trigger";
 
-        log_view->append(R"(<span style=" color:#ffffff;">)"+action+R"(</span>)");
+        log_view->append(R"(<span style=" color:#ffffff;">)"+buttonName+R"(</span>)");
+        ui->pushButton_Connect->setEnabled(true);
     }
 
    
@@ -228,7 +240,27 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
     
 
     //signal Trigger add.
-    QObject::connect(Refresh,SIGNAL(triggered(bool)),this,SLOT(Refresh()));
+    // QObject::connect(Refresh,SIGNAL(triggered(bool)),this,SLOT(Refresh()));
+    QObject::connect(
+                Refresh,
+                &QAction::triggered,
+                this,
+                [&](){
+                        ui->Filelist->clear();
+                        qDebug("SurfingPath:%s",SurfingPath.toStdString().c_str());
+                        QList<QString> newItemInformation{"-","..","—",ParentPath};
+                        ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+
+                        std::string Information = Client1.cliFileSurfing(FullIP,Port,SurfingPath);
+                        HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
+
+                        for(int index = 0;index<=SizeVector.size()-1;++index){
+                            QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
+                            QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
+                            ui->Filelist->addTopLevelItem(newItem);
+                        }
+                    }
+    );
     QObject::connect(Delete,SIGNAL(triggered(bool)),this,SLOT(Delete()));
     QObject::connect(newDir,SIGNAL(triggered(bool)),this,SLOT(newDir()));
     QObject::connect(Rename,SIGNAL(triggered(bool)),this,SLOT(Rename()));
@@ -298,40 +330,41 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
        if(PathVector.size()>1){
             qDebug("上一级Path:%s",PathVector.at(PathVector.size()-2).c_str());
-            SurfingPath = PathVector.at(PathVector.size()-2).c_str();
+            ParentPath = PathVector.at(PathVector.size()-2).c_str();
+            SurfingPath = PathVector.at(PathVector.size()-1).c_str();
         }
 
         else{
             qDebug("上一级Path:/files");
-            SurfingPath = rootPath;
+            ParentPath = rootPath;
         }
 
         // qDebug("%s",Information.c_str());
 
-       ui->Filelist->clear();
 
 
-    //    QList<QString> newItemInformation{"-","..","-",listItem->text(3)+"\\.."};
-        QList<QString> newItemInformation{"-","..","—",SurfingPath};
+        //Filelist update part.
+        ui->Filelist->clear();
+
+        QList<QString> newItemInformation{"-","..","—",ParentPath};
         ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
         if(itemName==".."&&itemLink==rootPath){
            qDebug("redirect to the disk select.");
-           ui->Filelist->clear();
+           
            Information = Client1.cliFileSurfing(FullIP,Port,rootPath);
            HTMLExtract(Information,LinkVector,NameVector);
 
            for(int index = 0;index<=NameVector.size()-1;++index){
-               QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),"——",LinkVector.at(index).c_str()};
+               QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
                QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
                ui->Filelist->addTopLevelItem(newItem);
-           }
-
+            }
 
         }
 
         else{
-           for(int index = 0;index<=SizeVector.size()-1;++index){
+           for(int index = 0;index<=NameVector.size()-1;++index){
                QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
                QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
                ui->Filelist->addTopLevelItem(newItem);
@@ -347,19 +380,23 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
 void MainWindow::Tab_pressed(){
    qDebug() << "action trigger";
-   AboutWindow->show();
 
-//   QMessageBox::information(this, "提示", "已弹窗", QMessageBox::Ok, QMessageBox::NoButton);
+   QAction *Action = (QAction*)sender();
+   QString ActionName = Action->text();
+
+   if(ActionName == "IP控制台"){
+       IP_controlPanelWindow->show();
+   }
+
+   else{
+       AboutWindow->show();
+   }
 
 }
 
-void MainWindow::Download(){
-    qDebug("Download Item.");
-}
-
-void MainWindow::Refresh(){
-    qDebug("Refresh Page.");
-}
+// void MainWindow::Refresh(){
+    
+// }
 
 void MainWindow::Rename(){
     qDebug("Rename item.");
@@ -373,5 +410,6 @@ void MainWindow::newDir(){
     qDebug("create newDir.");
 }
 
+//test changed
 
 

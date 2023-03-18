@@ -21,10 +21,12 @@ set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp mainwindow.h mainwindow.ui
         about.cpp about.h about.ui
-        ./dependences/httplib.h
-        ./dependences/json.hpp
+        ./dependences/extern_lib/httplib.h
+        ./dependences/extern_lib/json.hpp
         connect.cpp connect.h
-        HTMLFliter.h
+        ./dependences/HTMLFliter.h
+        ip_controlpanel.cpp ip_controlpanel.h ip_controlpanel.ui
+
         ${TS_FILES}
 )
 

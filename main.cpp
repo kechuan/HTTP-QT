@@ -4,7 +4,7 @@
 #include <QLocale>
 #include <QTranslator>
 
-#include <QtCore/QTextCodec>
+//#include <QtCore/QTextCodec>
 
 //# pragma execution_character_set("GBK")
 

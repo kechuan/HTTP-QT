@@ -1,14 +1,14 @@
 #include "connect.h"
 #include <QDebug>
-#include <future>
+// #include <future>
 // #include <regex>
 #include <fstream>
 
-#include "./dependences/httplib.h"
-#include "./dependences/json.hpp"
+#include "./dependences/extern_lib/httplib.h"
+#include "./dependences/extern_lib/json.hpp"
 
-#define readyStatus std::future_status::ready
-#define timeoutStatus std::future_status::timeout
+// #define readyStatus std::future_status::ready
+// #define timeoutStatus std::future_status::timeout
 
 using namespace httplib;
 
@@ -19,7 +19,7 @@ using json = nlohmann::json;
 
 // std::smatch match;
 
-std::future_status status;
+//std::future_status status;
 
 void WriteToFile(std::string& FileName,std::string& Data); //预声明
 
@@ -55,12 +55,10 @@ std::string Connect::cliFileSurfing(QString& IP,int& Port,QString& Postition){
 
 
 void Connect::cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName){
-
+    Client cli(IP.toStdString(),Port);
     std::string fileName = itemName.toStdString().c_str();
 
     qDebug("download trigger Link:%s",Postition.toStdString().c_str());
-
-    Client cli(IP.toStdString(),Port);
 
 
     std::string path = "./downloads/";
@@ -77,18 +75,34 @@ void Connect::cliFileDownload(QString& IP,int& Port,QString& Postition,QString& 
 
 
     qDebug("FileSize:%zu",body.size());
-
-
     WriteToFile(fileName,body);
     
-
 }
 
 
 
-void Connect::cliPost(QString& Position){
-    qDebug()<<"Post Finished.";
-    
+void Connect::cliFileUpload(QString& IP,int& Port,QString& QTargetPosition,httplib::MultipartFormDataItems &items){
+    Client cli(IP.toStdString(),Port);
+    qDebug("the TargetPosition is:%s",QTargetPosition.toStdString().c_str());
+
+    std::string TargetPosition = QTargetPosition.toStdString().c_str();
+
+    if (auto ping = cli.Post("/ping")){
+
+        if(ping->status==200){
+            qDebug()<<"server ok";
+
+            //文件流执行
+//            qDebug("item length:%zu",items.size());
+
+//            qDebug("queryname:%s",items.at(0).name.c_str());
+//            qDebug("filename:%s",items.at(0).filename.c_str());
+//            qDebug("filecontent:%s, filesize %zu",items.at(0).content.c_str(),items.at(0).content.size());
+//            qDebug("FileExt:%s",items.at(0).content_type.c_str());
+
+            auto upload = cli.Post("/upload/"+TargetPosition, items);
+        }
+    }
 }
 
 
@@ -136,4 +150,38 @@ void WriteToFile(std::string& FileName,std::string& Data){ //overload
     newFile<<Data;
     newFile.close();
         
+}
+
+
+void ReadTheFile(QString &Qpath,std::string &Information){
+    std::ifstream TargetFile;
+    std::string path = Qpath.toStdString();
+
+    if(path.substr(path.find_last_of(".")+1) != "txt" ){
+        // cout<<"open in binary way"<<endl;
+        TargetFile.open(path,std::ios_base::binary);
+        
+    }
+
+    else{
+        TargetFile.open(path);
+    }
+
+
+    if(!TargetFile.is_open()){
+        qDebug()<<"open failed.";
+    }
+
+    else{
+        
+        //STL->istreambuf_iterators
+        std::string Data((std::istreambuf_iterator<char>(TargetFile)), (std::istreambuf_iterator<char>()));
+        Information = std::move(Data);
+        TargetFile.close();
+
+        qDebug("the size of the File:%zu",Data.length());
+
+    }
+
+
 }

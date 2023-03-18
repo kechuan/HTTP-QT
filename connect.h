@@ -4,6 +4,7 @@
 #include <string>
 #include <QObject>
 
+#include "./dependences/extern_lib/httplib.h"
 
 class Connect{
 private:
@@ -17,7 +18,10 @@ public:
 
     
     void cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName);
-    void cliPost(QString& Postition);
+    void cliFileUpload(QString& IP,int& Port,QString& TargetPosition,httplib::MultipartFormDataItems &items);
+
+    std::string ReadTheFile(QString &Qpath,std::string &Information);
+
 
 };
 

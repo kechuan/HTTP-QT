@@ -17,7 +17,7 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QLabel" name="label">
+      <widget class="QLabel" name="AboutName">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -34,9 +34,9 @@
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="AboutVersion">
        <property name="text">
-        <string>version:-1 </string>
+        <string>version:-2</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -48,9 +48,9 @@
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_3">
      <item>
-      <widget class="QLabel" name="label_3">
+      <widget class="QLabel" name="AboutTime">
        <property name="text">
-        <string>Build Time:23.2.21</string>
+        <string>Build Time:23.3.15</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>

@@ -32,234 +32,6 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <item>
-         <widget class="QGroupBox" name="groupBox_IP_controlPanel">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>341</width>
-            <height>156</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>1200</width>
-            <height>156</height>
-           </size>
-          </property>
-          <property name="layoutDirection">
-           <enum>Qt::LeftToRight</enum>
-          </property>
-          <property name="title">
-           <string>IP控制台</string>
-          </property>
-          <property name="flat">
-           <bool>false</bool>
-          </property>
-          <property name="checkable">
-           <bool>false</bool>
-          </property>
-          <layout class="QHBoxLayout" name="horizontalLayout">
-           <item>
-            <layout class="QVBoxLayout" name="verticalLayout_IP_Panel">
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_7">
-               <item>
-                <widget class="QLabel" name="label_2">
-                 <property name="maximumSize">
-                  <size>
-                   <width>60</width>
-                   <height>15</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>占位符</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_IPsetting">
-               <item>
-                <widget class="QLabel" name="label_IP_Address">
-                 <property name="text">
-                  <string>IP Address:</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_IP_1">
-                 <property name="maximumSize">
-                  <size>
-                   <width>50</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>192</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="label_Dot">
-                 <property name="text">
-                  <string>.</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_IP_2">
-                 <property name="maximumSize">
-                  <size>
-                   <width>50</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>168</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="label_Dot_2">
-                 <property name="text">
-                  <string>.</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_IP_3">
-                 <property name="maximumSize">
-                  <size>
-                   <width>50</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>56</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="label_Dot_3">
-                 <property name="text">
-                  <string>.</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_IP_4">
-                 <property name="maximumSize">
-                  <size>
-                   <width>50</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>1</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_2">
-               <item>
-                <widget class="QLabel" name="label_IP_Port">
-                 <property name="text">
-                  <string>Port:</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_Port">
-                 <property name="maximumSize">
-                  <size>
-                   <width>44</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>8888</string>
-                 </property>
-                 <property name="maxLength">
-                  <number>32767</number>
-                 </property>
-                 <property name="readOnly">
-                  <bool>false</bool>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer_2">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_connectionPanel">
-               <item>
-                <widget class="QPushButton" name="pushButton_Connect">
-                 <property name="text">
-                  <string>Connect</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QPushButton" name="pushButton_Abort">
-                 <property name="text">
-                  <string>Abort</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <spacer name="horizontalSpacer_3">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
          <widget class="QTreeWidget" name="Filelist">
           <property name="indentation">
            <number>25</number>
@@ -290,7 +62,7 @@
             <string>To start</string>
            </property>
            <property name="text">
-            <string>you need to config </string>
+            <string>please config </string>
            </property>
            <property name="text">
             <string>setting-&gt;IP control Panel</string>
@@ -360,7 +132,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <property name="title">
      <string>Setting</string>
     </property>
-    <addaction name="IP_contorlPanel"/>
+    <addaction name="IP_controlPanel"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -377,7 +149,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <string>About</string>
    </property>
   </action>
-  <action name="IP_contorlPanel">
+  <action name="IP_controlPanel">
    <property name="text">
     <string>IP控制台</string>
    </property>

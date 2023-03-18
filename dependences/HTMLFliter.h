@@ -4,8 +4,20 @@
 #include <regex>
 #include <string>
 #include <QDebug>
+// #include "testdefine.h"
 
-void copy_template(std::string& string, std::regex &regexp, size_t &&matchGroup , std::vector<std::string> &vector){
+inline std::regex HTMLLinkReg(R"(<\s*a\s+[^>]*href\s*=\s*"([^/view/]+[^"]*))", std::regex::icase); //target group1
+inline std::regex HTMLDiskReg(R"((path=)+(.*))", std::regex::icase);                               //target group1
+inline std::regex HTMLNameReg(R"(<\s*div\s+[^>]*class\s*=\"(dirname|filename)\">+([^<]*))", std::regex::icase);       //target group2
+inline std::regex HTMLSizeReg(R"(<\s*div\s*+[^>]*class\s*=\"filesize\">+([^<]*))", std::regex::icase);                //target group1
+
+inline std::regex MenuContentMatch(R"!!(<ul>+(.*?)+</ul>)!!");                                     //*target group0
+inline std::regex list(R"(<div\s*id=\"list\">)");
+
+inline std::smatch matches;
+
+
+inline void copy_template(std::string& string, std::regex &regexp, size_t &&matchGroup , std::vector<std::string> &vector){
     std::copy(
         std::sregex_token_iterator(string.begin(), string.end(), regexp, matchGroup),
         std::sregex_token_iterator(),
@@ -13,17 +25,7 @@ void copy_template(std::string& string, std::regex &regexp, size_t &&matchGroup 
     );
 }
 
-std::regex HTMLLinkReg(R"(<\s*a\s+[^>]*href\s*=\s*"([^/view/]+[^"]*))", std::regex::icase); //target group1
-std::regex HTMLDiskReg(R"((path=)+(.*))", std::regex::icase);                               //target group1
-std::regex HTMLNameReg(R"(<\s*div\s+[^>]*class\s*=\"(dirname|filename)\">+([^<]*))", std::regex::icase);       //target group2
-std::regex HTMLSizeReg(R"(<\s*div\s*+[^>]*class\s*=\"filesize\">+([^<]*))", std::regex::icase);                //target group1
-
-std::regex MenuContentMatch(R"!!(<ul>+(.*?)+</ul>)!!");                                     //*target group0
-std::regex list(R"(<div\s*id=\"list\">)");
-
-std::smatch matches;
-
-std::string HTMLFliter(std::string &Information,std::vector<std::string> &PathVector){
+inline std::string HTMLFliter(std::string &Information,std::vector<std::string> &PathVector){
     std::string tempString = std::move(Information);
     std::string MenuContent;
 
@@ -46,7 +48,7 @@ std::string HTMLFliter(std::string &Information,std::vector<std::string> &PathVe
 };
 
 
-void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, std::vector<std::string> &NameVector){
+inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, std::vector<std::string> &NameVector){
 
     //reset all content
     LinkVector.clear();
@@ -65,10 +67,10 @@ void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, 
 //    for(auto &Link:LinkVector) qDebug("Link:%s",Link.c_str()); //不要直接使用 for(iter:<容器>) 因为会导致一次拷贝构造
 //    for(auto &Disk:NameVector) qDebug("Disk:%s",Disk.c_str());
 
-    
+
 }
 
-void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, std::vector<std::string> &PathVector, std::vector<std::string> &NameVector, std::vector<std::string> &SizeVector){
+inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, std::vector<std::string> &PathVector, std::vector<std::string> &NameVector, std::vector<std::string> &SizeVector){
 
     //reset all content
     LinkVector.clear();
@@ -85,10 +87,10 @@ void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, 
 
 //    for(auto &Size:SizeVector) qDebug("Size:%s",Size.c_str());
     copy_template(FilteredInformation,HTMLNameReg,2,NameVector);
-    
-    
+
+
 //    for(auto &Name:NameVector) qDebug("Name:%s",Name.c_str());
-    
+
     qDebug("the length of SizeVector:%zu",SizeVector.size());
     qDebug("the length of NameVector:%zu",NameVector.size());
 

@@ -3,14 +3,19 @@
 
 #include <QMainWindow>
 #include <QTreeWidgetItem>
+
 #include "about.h"
-// #include "IPcontorlPanel.h"
+#include "ip_controlpanel.h" //sub .h include done.
+
+// class IP_controlPanel; //前置声明
 
 QT_BEGIN_NAMESPACE
 namespace Ui { 
     class MainWindow;
 }
 QT_END_NAMESPACE
+
+
 
 class MainWindow : public QMainWindow
 {
@@ -20,8 +25,7 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    About *AboutWindow;
-//    IP_contorlPanel *IP_contorlPanelWindow;
+
 
 private:
     Ui::MainWindow *ui; //从此Mainwindow下的指代的指针则为ui  MainWindow *ui = new Ui::MainWindow();
@@ -30,10 +34,13 @@ private:
         child
     };
 
-    
+    About *AboutWindow;
+    IP_controlPanel *IP_controlPanelWindow;
+
+
 
 private slots:
-    void action_pressed();
+    // void action_pressed();
     void Tab_pressed();
     void itemAccess(QTreeWidgetItem *listItem, int column);
     bool TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column);
@@ -48,8 +55,10 @@ private slots:
     // void Test();
     void Rename();
     void Delete();
+    void NewDir();
+    // void Upload(); -> get?
     // void Refresh(); -> cli surfingPath
-    void newDir();
+    
 
     //Dir Area
     // void Open() -> itemAccess

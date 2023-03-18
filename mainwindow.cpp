@@ -2,12 +2,14 @@
 #include "./ui_mainwindow.h"
 #include "connect.h"
 
-#include "HTMLFliter.h"
+#include "./dependences/HTMLFliter.h"
 
 #include <QDebug>
 #include <QMessageBox>
-#include <windows.h>
+#include <QFileDialog>
 #include <string>
+#include <fstream>
+#include <QUrl>
 
 #include <vector>
 
@@ -43,8 +45,14 @@ MainWindow::MainWindow(QWidget *parent)
     AboutWindow = new About();
     AboutWindow->hide();
 
-//    IP_contorlPanelWindow = new IP_contorlPanel();
-//    IP_contorlPanelWindow->hide();
+    // IP_controlPanelWindow = new IP_controlPanel();
+   IP_controlPanelWindow = new IP_controlPanel(nullptr,ui); 
+   //第一个值:其默认值本来就是 QWidget *parent = nullptr 即父级 也就是所谓的Mainwindow身上 重新指向nullptr意思就和上方的About()含义一致
+   //第二个arg:
+
+//    IP_controlPanelWindow->setStyleSheet("border: 1px solid black;");
+
+    IP_controlPanelWindow->hide();
 
     QTabWidget *tabWidget_contentShow = ui->tabWidget_contentShow;
     tabWidget_contentShow->setMovable(true);
@@ -52,7 +60,6 @@ MainWindow::MainWindow(QWidget *parent)
     QTreeWidget *Filelist = ui->Filelist;
     Filelist->setStyleSheet("QHeaderView::section{background:#A3C99FFF;}"); //???QHeaderView
     Filelist->setContextMenuPolicy(Qt::CustomContextMenu);  //默认值 Default->0
-
 
     //这个所谓的menu本质上是一个enmu枚举
 
@@ -86,10 +93,10 @@ MainWindow::MainWindow(QWidget *parent)
    //规范提示传入的信号类型 最好全部都是简简单单的写个type上去 不需要多余的 类型修饰符 或者是*/&之类 否则会导致可能的内存泄露(以及难看的warning
 
 
-   QObject::connect(ui->pushButton_Connect,SIGNAL(released()),this,SLOT(action_pressed()));
-   QObject::connect(ui->pushButton_Abort,SIGNAL(released()),this,SLOT(action_pressed()));
-   QObject::connect(ui->About,SIGNAL(triggered()),this,SLOT(Tab_pressed()));
-//   QObject::connect(ui->IP_contorlPanel,SIGNAL(triggered()),this,SLOT(Tab_pressed()));
+//   QObject::connect(ui->pushButton_Connect,SIGNAL(released()),this,SLOT(action_pressed()));
+//   QObject::connect(ui->pushButton_Abort,SIGNAL(released()),this,SLOT(action_pressed()));
+    QObject::connect(ui->About,SIGNAL(triggered()),this,SLOT(Tab_pressed()));
+    QObject::connect(ui->IP_controlPanel,SIGNAL(triggered()),this,SLOT(Tab_pressed()));
 
 
    //warning: connect-not-normalized 对于信号与槽 似乎并不需要特别的分配&引用符号 用上普通的方式反而能避免更多的内存开销 真是奇怪
@@ -124,57 +131,6 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::action_pressed(){
-   qDebug() << "action trigger";
-   QTextBrowser *log_view = ui->textBrowser_log;
-   QPushButton *button = (QPushButton*)sender();
-   //将pushbutton触发的信息传递过来 注意这里的QPushButton*是指针函数 这也代表着这是可以被指向的
-   //只是后面的sender()确实没见过 不过以字面意思来看 应该就是指向触发这个行为的按钮
-
-    QString action = button->text();
-
-    //如你所见 因为cpp的switch case天生只能接受数值或者是char 因此无法直接把Qstring给传入进去 那么 只能使用传统的if else组合了
-
-    if(action == "Connect"){
-        qDebug() << "Connect trigger";
-
-        //通过子成员函数arg的QString链接字符串快捷用法 注意 arg本身仅支持右值传入
-        FullIP = QString("%1.%2.%3.%4").arg(ui->lineEdit_IP_1->text(),ui->lineEdit_IP_2->text(),ui->lineEdit_IP_3->text(),ui->lineEdit_IP_4->text());
-        Port = ui->lineEdit_Port->text().toInt();
-
-        log_view->append(R"(<span style=" color:#ffffff;">)"+action+FullIP+":"+ui->lineEdit_Port->text()+R"(</span>)");
-
-        if(Client1.cliPing(FullIP,Port)){
-            std::string Information = Client1.cliFileSurfing(FullIP,Port);
-            HTMLExtract(Information,LinkVector,NameVector);
-
-            ui->Filelist->clear();
-
-            //codeway add TreeItem
-
-            for(int index = 0;index<=NameVector.size()-1;index++){
-                QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
-                QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
-                ui->Filelist->addTopLevelItem(newItem);
-            }
-
-        }
-
-        else{
-            qDebug()<<"ping failed.";
-        }
-        
-
-    }
-
-    else{
-        qDebug() << "Abort trigger";
-
-        log_view->append(R"(<span style=" color:#ffffff;">)"+action+R"(</span>)");
-    }
-
-   
-}
 
 /*思路:
 至少信号应该是 使用QTreeWidgetItem以主体的信号 指传递是通过QTreeWidgetItem itemPressed()
@@ -222,41 +178,120 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
     //general way
     QAction *Refresh = new QAction("Refresh");
     QAction *Delete = new QAction("Delete");
-    QAction *newDir = new QAction("newDir");
+    QAction *NewDir = new QAction("NewDir");
     QAction *Rename = new QAction("Rename");
+    QAction *Upload = new QAction("Upload Files here...");
 
 
     popmenu->addAction(Refresh);
     popmenu->addAction(Delete);
-    popmenu->addAction(newDir);
+    popmenu->addAction(NewDir);
     popmenu->addAction(Rename);
+    popmenu->addAction(Upload);
     
 
     //signal Trigger add.
     // QObject::connect(Refresh,SIGNAL(triggered(bool)),this,SLOT(Refresh()));
     QObject::connect(
-                Refresh,
-                &QAction::triggered,
-                this,
-                [&](){
-                        ui->Filelist->clear();
-                        qDebug("SurfingPath:%s",SurfingPath.toStdString().c_str());
-                        QList<QString> newItemInformation{"-","..","—",ParentPath};
-                        ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+        Refresh,
+        &QAction::triggered,
+        this,
+        [&](){
+                ui->Filelist->clear();
+                qDebug("SurfingPath:%s",SurfingPath.toStdString().c_str());
+                QList<QString> newItemInformation{"-","..","—",ParentPath};
+                ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
-                        std::string Information = Client1.cliFileSurfing(FullIP,Port,SurfingPath);
-                        HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
+                std::string Information = Client1.cliFileSurfing(FullIP,Port,SurfingPath);
+                HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
 
-                        for(int index = 0;index<=SizeVector.size()-1;++index){
-                            QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
-                            QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
-                            ui->Filelist->addTopLevelItem(newItem);
-                        }
-                    }
+                for(int index = 0;index<=SizeVector.size()-1;++index){
+                    QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
+                    QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
+                    ui->Filelist->addTopLevelItem(newItem);
+                }
+            }
     );
     QObject::connect(Delete,SIGNAL(triggered(bool)),this,SLOT(Delete()));
-    QObject::connect(newDir,SIGNAL(triggered(bool)),this,SLOT(newDir()));
+    QObject::connect(NewDir,SIGNAL(triggered(bool)),this,SLOT(NewDir()));
     QObject::connect(Rename,SIGNAL(triggered(bool)),this,SLOT(Rename()));
+//    QObject::connect(Upload,SIGNAL(triggered(bool)),this,SLOT(Upload()));
+
+    QObject::connect(
+                Upload,
+                &QAction::triggered,
+                this,
+                [](){
+                    qDebug("Upload File.");
+                    //说起来多集合的QString 得用官方提供的QStringList来装载
+                    //然而内部方法与vector却没什么不同
+                    QStringList UploadFiles =  QFileDialog::getOpenFileNames(
+                        nullptr,
+                        tr("choose Files to upload"),
+                        "D:/All Local Downloads",
+                        tr("texts(*.txt *.ini *.log *.md);;images(*.jpg *.jpeg *.png *.bmp);;video files(*.mp4 *.avi *.flv *.mkv);;All files(*.*)")
+                    );
+
+                    httplib::MultipartFormDataItems items; //->std::vector<httplib::MultipartFormData>
+                    httplib::MultipartFormData FormData;
+
+                    if(UploadFiles.length()!=0){
+
+                        qDebug("UploadFiles length:%zu",UploadFiles.length());
+                        for(auto &i:UploadFiles){
+                            QFileInfo info(i);
+
+                            QString Filename = std::move(info.fileName());
+                            QString content_type = std::move(info.suffix());
+
+                            qDebug("Filename:%s,content_type:%s",Filename.toStdString().c_str(),content_type.toStdString().c_str());
+
+                            FormData.name = "Files";
+//                            FormData.content = std::move(Client1.ReadTheFile(i));
+
+//                            Client1.ReadTheFile(i,filecontent);
+
+                            FormData.filename = std::move(Filename.toStdString());
+                            FormData.content_type = std::move(content_type.toStdString());
+
+                            std::string filecontent;
+
+                            std::ifstream TargetFile;
+                            std::string path = i.toStdString();
+
+                            qDebug("open in binary way");
+                            TargetFile.open(path,std::ios_base::binary);
+
+
+                            if(!TargetFile.is_open()){
+                                qDebug("failed");
+                            }
+
+                            else{
+                                //STL->istreambuf_iterators
+                                std::string filecontent((std::istreambuf_iterator<char>(TargetFile)), (std::istreambuf_iterator<char>()));
+                                FormData.content = std::move(filecontent);
+                                TargetFile.close();
+                                items.emplace_back(FormData);
+
+                            }
+
+                        }
+                    }
+
+                    
+                    
+
+
+//                    qDebug()<<"please select the TargetPosition want to upload";
+
+                    QString TargetPosition = R"(D:\cpp\app\HTTP-UI\build-HTTP-QT-Desktop_Qt_6_2_4_MinGW_64_bit-Debug\downloads)";
+
+                    Client1.cliFileUpload(FullIP,Port,TargetPosition,items);
+
+
+                }
+    );
 
      if(itemSize!="—"){
         //file area
@@ -309,6 +344,13 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
    QString itemName = listItem->text(1);
    QString itemSize = listItem->text(2);
    QString itemLink = listItem->text(3);
+
+   // QByteArray EncodingName = QUrl::toPercentEncoding(itemName);
+
+
+   // qDebug("decoding:%s",QUrl::fromPercentEncoding(EncodingName).toStdString().c_str());
+
+
 
    if(itemSize!="—"){
        qDebug("you clicked a file which size is:%s",itemSize.toStdString().c_str());
@@ -373,10 +415,17 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
 void MainWindow::Tab_pressed(){
    qDebug() << "action trigger";
-   AboutWindow->show();
-//   IP_contorlPanelWindow->show();
 
-//   QMessageBox::information(this, "提示", "已弹窗", QMessageBox::Ok, QMessageBox::NoButton);
+   QAction *Action = (QAction*)sender();
+   QString ActionName = Action->text();
+
+   if(ActionName == "IP控制台"){
+       IP_controlPanelWindow->show();
+   }
+
+   else{
+       AboutWindow->show();
+   }
 
 }
 
@@ -392,9 +441,52 @@ void MainWindow::Delete(){
     qDebug("Delete item.");
 }
 
-void MainWindow::newDir(){
+void MainWindow::NewDir(){
     qDebug("create newDir.");
 }
+
+//void MainWindow::Upload(){
+//    qDebug("Upload File.");
+
+//    //说起来多集合的QString 得用官方提供的QStringList来装载
+//    //然而内部方法与vector却没什么不同
+//    QStringList UploadFiles =  QFileDialog::getOpenFileNames(
+//        this,
+//        tr("choose Files to upload"),
+//        "D:/All Local Downloads",
+//        tr("texts(*.txt *.ini *.log *.md);;images(*.jpg *.jpeg *.png *.bmp);;video files(*.mp4 *.avi *.flv *.mkv);;All files(*.*)")
+//    );
+
+
+//    if(UploadFiles.length()!=0){
+//        qDebug("UploadFiles length:%zu",UploadFiles.length());
+//        for(auto &i:UploadFiles){
+//            QFileInfo info(i);
+//            QString Filename = info.fileName();
+//            QString type = info.suffix();
+//        }
+//    }
+
+
+//        // struct MultipartFormData {
+//        //   std::string name;
+//        //   std::string content;
+//        //   std::string filename;
+//        //   std::string content_type;
+//        // };
+
+//        uploadFileData.emplace_back
+
+//    QString FilePosition = "here";
+//    QString TargetPosition = "there";
+//    QString Filename = "your";
+
+//    qDebug()<<"please select the TargetPosition want to upload";
+//    Client1.cliFileUpload(FullIP,Port,FilePosition,TargetPosition,Filename);
+
+
+
+//}
 
 //test changed
 

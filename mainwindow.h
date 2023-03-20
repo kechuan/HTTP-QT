@@ -24,27 +24,20 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-
-
+    void keyPressEvent(QKeyEvent *event);
+//    void mousePressEvent(QMouseEvent *event);
 
 private:
     Ui::MainWindow *ui; //从此Mainwindow下的指代的指针则为ui  MainWindow *ui = new Ui::MainWindow();
-    enum itemType{
-        root = QTreeWidgetItem::UserType, //1000  用于自定义类型的最小值。低于 UserType 的值由 Qt 预留。
-        child
-    };
-
     About *AboutWindow;
     IP_controlPanel *IP_controlPanelWindow;
 
 
 
 private slots:
-    // void action_pressed();
     void Tab_pressed();
     void itemAccess(QTreeWidgetItem *listItem, int column);
     bool TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column);
-
     void menu_blank();
 
     // void menuPressSlot();
@@ -56,6 +49,8 @@ private slots:
     void Rename();
     void Delete();
     void NewDir();
+    void Copy();
+    void Cut();
     // void Upload(); -> get?
     // void Refresh(); -> cli surfingPath
     
@@ -65,6 +60,9 @@ private slots:
     
     //File Area
     // void Download(); -> itemAccess
+
+
+    void LostSelection(int column);
 
 };
 

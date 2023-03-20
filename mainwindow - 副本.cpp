@@ -9,7 +9,7 @@
 #include <QFileDialog>
 #include <string>
 #include <fstream>
-#include <QKeyEvent>
+#include <QUrl>
 
 #include <vector>
 
@@ -18,8 +18,6 @@ std::vector<std::string> LinkVector = {};
 std::vector<std::string> PathVector = {};
 std::vector<std::string> NameVector = {};
 std::vector<std::string> SizeVector = {};
-
-std::vector<std::string> SelectedItemsVector = {};
 
 QString FullIP;
 int Port;
@@ -50,7 +48,9 @@ MainWindow::MainWindow(QWidget *parent)
     // IP_controlPanelWindow = new IP_controlPanel();
    IP_controlPanelWindow = new IP_controlPanel(nullptr,ui);
    //第一个值:其默认值本来就是 QWidget *parent = nullptr 即父级 也就是所谓的Mainwindow身上 重新指向nullptr意思就和上方的About()含义一致
-   //第二个arg:获取ui信息 谁的? MainWindow的
+   //第二个arg:
+
+//    IP_controlPanelWindow->setStyleSheet("border: 1px solid black;");
 
     IP_controlPanelWindow->hide();
 
@@ -62,24 +62,66 @@ MainWindow::MainWindow(QWidget *parent)
     Filelist->setContextMenuPolicy(Qt::CustomContextMenu);  //默认值 Default->0
     Filelist->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
-
-
-
-
-
     //这个所谓的menu本质上是一个enmu枚举
 
-   //warning: connect-not-normalized 对于信号与槽 似乎并不需要特别的分配&引用符号 用上普通的方式反而能避免更多的内存开销 真是奇怪
+    //那么setPolicy
+    //description from http://qt5.digitser.top/5.9/zh-CN/qt.html#ContextMenuPolicy-enum
+    /*
+        enum Qt:: ContextMenuPolicy
+        此枚举类型定义 Widget 在展示上下文菜单方面可以采用的各种策略。
+
+        常量  值   描述
+        Qt::NoContextMenu   0   Widget 不提供上下文菜单，上下文菜单的处理被延期到 Widget 的父级。
+        Qt::PreventContextMenu  4   Widget 不提供上下文菜单，且相比 NoContextMenu ，处理 not 被延期到 Widget 的父级。这意味着所有鼠标右键事件保证都被交付给 Widget 本身，透过 QWidget::mousePressEvent ()，和 QWidget::mouseReleaseEvent ().
+        Qt::DefaultContextMenu  1   Widget 的 QWidget::contextMenuEvent () 处理程序被调用。
+        Qt::ActionsContextMenu  2   Widget 显示其 QWidget::actions () 作为上下文菜单。
+        Qt::CustomContextMenu   3   Widget 发射 QWidget::customContextMenuRequested () 信号。
+    */
+
+    /*
+    那么 现在的设置值为3 意味发送了customContextMenuRequested信号
+        这也是为什么要在connect上选择监听customContextMenuRequested(以下简称cr)
+
+    不过还有一个问题:   什么是cr信号具体是什么东西 它携带了什么信息传递?
+
+    在wiki里是这么解释的 [signal] cr(const QPoint &pos)
+
+    也就是说 它实际上携带的是 被触发的位置信息 pos
+    这也意味着 例如在某个widget上触发一个鼠标的左键 可以被得知是在这个widget的 x:? y:?坐标上触发
+    然后已返回 触发了 的信息
+*/
+
    //规范提示传入的信号类型 最好全部都是简简单单的写个type上去 不需要多余的 类型修饰符 或者是*/&之类 否则会导致可能的内存泄露(以及难看的warning
 
+
+//   QObject::connect(ui->pushButton_Connect,SIGNAL(released()),this,SLOT(action_pressed()));
+//   QObject::connect(ui->pushButton_Abort,SIGNAL(released()),this,SLOT(action_pressed()));
     QObject::connect(ui->About,SIGNAL(triggered()),this,SLOT(Tab_pressed()));
     QObject::connect(ui->IP_controlPanel,SIGNAL(triggered()),this,SLOT(Tab_pressed()));
-    QObject::connect(Filelist,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(itemAccess(QTreeWidgetItem*,int)));
+
+
+   //warning: connect-not-normalized 对于信号与槽 似乎并不需要特别的分配&引用符号 用上普通的方式反而能避免更多的内存开销 真是奇怪
+
+   //**双击下载占位符
+   QObject::connect(Filelist,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(itemAccess(QTreeWidgetItem*,int)));
 
    //需求将QTreeWidget界面下对每个子item添加右键菜单 课是QTreeWidget自带的方法并没有这种设置 怎么办?
+
    //思路:先检测对treewidget的点击 然后检测被点击的item是左键还是右键 右键时执行qMenu
     QObject::connect(Filelist,SIGNAL(itemPressed(QTreeWidgetItem*,int)),this,SLOT(TreeWidgetItem_Menu(QTreeWidgetItem*,int))); //item按下判断触发
-    QObject::connect(ui->tabWidget_contentShow,SIGNAL(tabBarClicked(int)),this,SLOT(LostSelection(int)));
+//   QObject::connect(
+//       Filelist,
+//       &QTreeWidget::itemPressed,
+//       this,
+//       SLOT(TreeWidgetItem_Menu(QTreeWidget*,QTreeWidgetItem*,int))
+//    );
+    //item按下判断触发
+
+
+   //customContextMenuRequested -> onCustomContextMenuRequested 颇有种自问自答的感觉 不过意思相当于自定义事件的信号触发 然后由负责处理自定义事件的槽来处理
+   // QObject::connect(Filelist,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(showTreeRightMenu(QPoint)));
+
+   // customContextMenuRequested
 
 }
 
@@ -129,10 +171,24 @@ qapplication
 */
 
 bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
+// bool MainWindow::TreeWidgetItem_Menu(QTreeWidget *Filelist,QTreeWidgetItem *listItem, int column){
+
+//    qDebug("the selected item:%zu",Filelist->selectedItems().count()); //count:return the number of the list
+
+
+
     //那么其逻辑实际上等于 treewidgetitem作用域+全局右键判断
     if(qApp->mouseButtons() != Qt::RightButton) return false;
 
     qDebug()<<"right triggered";
+
+    QTreeWidget *Filelist = ui->Filelist;
+    QList selectedList = Filelist->selectedItems();
+
+    if(selectedList.size()>1){
+        for(auto &i:selectedList)   qDebug("you selected the %s",i->text(1).toStdString().c_str());
+    }
+
 
     QString itemSize = listItem->text(2);
     QMenu *popmenu = new QMenu;
@@ -158,7 +214,7 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
         Refresh,
         &QAction::triggered,
         this,
-        [this](){   //捕获this 以引入函数执行主体 this->mainwindow
+        [this](){
                 ui->Filelist->clear();
                 qDebug("SurfingPath:%s",SurfingPath.toStdString().c_str());
                 QList<QString> newItemInformation{"-","..","—",ParentPath};
@@ -265,9 +321,9 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
 
         if(selectedList.size()>1){
             for(auto &i:selectedList){
-
                 QString selectedListsName = i->text(1);
                 QString selectedListsSize = i->text(2);
+//                QString selectedListsLink = i->text(3);
 
                 if(selectedListsSize!="—"){
                     qDebug("you selected the %s,which size is:%s",i->text(1).toStdString().c_str(),i->text(2).toStdString().c_str());
@@ -275,17 +331,24 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
 
                 else{
                     qDebug("you select %s which is not a File!",selectedListsName.toStdString().c_str());
-                    //此处也应弹出Download 但是是不可点击状态(灰色) 所以还是别直接return false完事
-                    Download->setEnabled(false);
+                    //此处也应弹出Download 但是是不可点击状态(灰色)
+                    return false;
                 }
 
 
             }
 
+            popmenu->insertAction(Refresh,Download);
         }
 
-        popmenu->insertAction(Refresh,Download);
-        //signal Trigger add. but new QT5 string
+        else{
+            popmenu->insertAction(Refresh,Download);
+        }
+
+
+
+
+        //signal Trigger add. but custom
 
         QObject::connect(
             Download,
@@ -310,16 +373,23 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
         popmenu->insertAction(Refresh,Open);
 
         //signal Trigger add.
+//        menuBind(triggered(bool),listItem,column); QT5
         QObject::connect(Open,&QAction::triggered,this,[listItem,&column,this](){itemAccess(listItem,column);});
+        //QT5 change: Exp1:  QAction Open :  triggered(bool) -> &QAction::triggered
 
     }
 
-     popmenu->move(ui->Filelist->cursor().pos());    //菜单显示在鼠标点击的位置
+
+     popmenu->move(ui->Filelist->cursor().pos());
      popmenu->show();
 
      return true;
 
+     //菜单显示在鼠标点击的位置
+
 }
+
+
 
 void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
@@ -419,6 +489,10 @@ void MainWindow::Tab_pressed(){
 
 }
 
+// void MainWindow::Refresh(){
+
+// }
+
 void MainWindow::Rename(){
     qDebug("Rename item.");
 }
@@ -439,21 +513,4 @@ void MainWindow::Cut(){
     qDebug("select the file.");
 }
 
-void MainWindow::LostSelection(int column){
-//    qDebug("lost the selection because of clicked :%d",column);
-    ui->Filelist->clearSelection();
-}
-
-//快捷键定义区
-void MainWindow::keyPressEvent(QKeyEvent *event){
-
-}
-
-//void MainWindow::mousePressEvent(QMouseEvent *event){
-//    QModelIndex index = ui->Filelist->indexAt(event->pos());
-
-//    if(!index.isValid()){
-//        qDebug("lost the selection");
-//        ui->Filelist->clearSelection();
-//    }
-//}
+//test changed

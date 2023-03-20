@@ -48,6 +48,7 @@ void IP_controlPanel::action_pressed(){
    QPushButton *button = (QPushButton*)sender();
    QString buttonName = button->text();
 
+
         if(buttonName == "Connect"){
             qDebug() << "Connect trigger";
 

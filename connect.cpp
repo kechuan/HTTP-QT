@@ -1,9 +1,8 @@
-
 #include "connect.h"
+
 #include <QDebug>
-// #include <future>
-// #include <regex>
 #include <fstream>
+#include <filesystem>
 
 #include "./dependences/extern_lib/httplib.h"
 #include "./dependences/extern_lib/json.hpp"
@@ -92,15 +91,6 @@ void Connect::cliFileUpload(QString& IP,int& Port,QString& QTargetPosition,httpl
 
         if(ping->status==200){
             qDebug()<<"server ok";
-
-            //文件流执行
-//            qDebug("item length:%zu",items.size());
-
-//            qDebug("queryname:%s",items.at(0).name.c_str());
-//            qDebug("filename:%s",items.at(0).filename.c_str());
-//            qDebug("filecontent:%s, filesize %zu",items.at(0).content.c_str(),items.at(0).content.size());
-//            qDebug("FileExt:%s",items.at(0).content_type.c_str());
-
             auto upload = cli.Post("/upload/"+TargetPosition, items);
         }
     }
@@ -138,15 +128,15 @@ bool Connect::cliPing(QString& IP,int& Port){
 
 
 void WriteToFile(std::string& FileName,std::string& Data){ //overload
-    // std::regex TextFliter(R"(txt|ini|cfg|xml|json|xml)");
-    // std::string FileExt = FileName.substr(FileName.find_last_of(".")+1);
-
     std::string path = "./downloads/";
-
     path.append(FileName.c_str());
     qDebug("path:%s",path.c_str());
 
-    std::ofstream newFile(path, std::ios::binary);
+//    std::string realPath = path.
+//方案一 将string转成wchar_t
+//方案二(C++ 17 add,C++ 20 deprecated) 使用std::filesystem::u8path(path) 来使用utf-8编码对path进行操作
+
+    std::ofstream newFile(std::filesystem::u8path(path), std::ios::binary);
 
     newFile<<Data;
     newFile.close();
@@ -180,7 +170,7 @@ void ReadTheFile(QString &Qpath,std::string &Information){
         Information = std::move(Data);
         TargetFile.close();
 
-        qDebug("the size of the File:%zu",Data.length());
+        qDebug("the size of the File:%zu",Data.size());
 
     }
 

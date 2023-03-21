@@ -13,13 +13,10 @@
 
 #include <vector>
 
-
 std::vector<std::string> LinkVector = {};
 std::vector<std::string> PathVector = {};
 std::vector<std::string> NameVector = {};
 std::vector<std::string> SizeVector = {};
-
-std::vector<std::string> SelectedItemsVector = {};
 
 QString FullIP;
 int Port;
@@ -160,7 +157,7 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
         this,
         [this](){   //捕获this 以引入函数执行主体 this->mainwindow
                 ui->Filelist->clear();
-                qDebug("SurfingPath:%s",SurfingPath.toStdString().c_str());
+                qDebug("Surfingpath%s",SurfingPath.toStdString().c_str());
                 QList<QString> newItemInformation{"-","..","—",ParentPath};
                 ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
@@ -445,8 +442,15 @@ void MainWindow::LostSelection(int column){
 }
 
 //快捷键定义区
-void MainWindow::keyPressEvent(QKeyEvent *event){
 
+//keyPressEvent 重载
+void MainWindow::keyPressEvent(QKeyEvent *event){
+    if (event->key() == Qt::Key_Return){
+        QTreeWidgetItem *listItem = ui->Filelist->selectedItems().at(0);
+            if (listItem != nullptr){
+                emit ui->Filelist->itemDoubleClicked(listItem, 0); //回车->选择列表的双击
+            }
+        }
 }
 
 //void MainWindow::mousePressEvent(QMouseEvent *event){

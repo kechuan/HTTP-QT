@@ -2,6 +2,8 @@
 #include "./ui_mainwindow.h"
 #include "connect.h"
 
+//#include "ui_propertieswidget.h"    //子窗体头文件
+
 #include "./dependences/HTMLFliter.h"
 
 #include <QDebug>
@@ -10,6 +12,7 @@
 #include <string>
 #include <fstream>
 #include <QKeyEvent>
+#include <QSplitter>
 
 #include <vector>
 
@@ -25,13 +28,9 @@ QString rootPath = "/file";
 QString SurfingPath;
 QString ParentPath;
 
+bool m_status = false;
+
 Connect Client1;
-
-// void menuBind(bool pressed, const QTreeWidgetItem* listitem, int colmun){
-//     qDebug("Open! I passthough the information:%s",listitem->text(2).toStdString().c_str());
-// }
-
-
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -42,26 +41,33 @@ MainWindow::MainWindow(QWidget *parent)
 
     //声明其他ui类
     AboutWindow = new About();
+    // About *AboutWindow = new About();
     AboutWindow->hide();
 
-    // IP_controlPanelWindow = new IP_controlPanel();
-   IP_controlPanelWindow = new IP_controlPanel(nullptr,ui);
+    IP_controlPanelWindow = new IP_controlPanel(nullptr,ui);
+    IP_controlPanelWindow->hide();
+
+    DockWidget = new PropertiesWidget(ui->statusShow,ui); //显示在statusShow里
+    DockWidget->show();
+
+
    //第一个值:其默认值本来就是 QWidget *parent = nullptr 即父级 也就是所谓的Mainwindow身上 重新指向nullptr意思就和上方的About()含义一致
    //第二个arg:获取ui信息 谁的? MainWindow的
-
-    IP_controlPanelWindow->hide();
 
     QTabWidget *tabWidget_contentShow = ui->tabWidget_contentShow;
     tabWidget_contentShow->setMovable(true);
 
     QTreeWidget *Filelist = ui->Filelist;
     Filelist->setStyleSheet("QHeaderView::section{background:#A3C99FFF;}"); //???QHeaderView
-    Filelist->setContextMenuPolicy(Qt::CustomContextMenu);  //默认值 Default->0
+//    Filelist->setContextMenuPolicy(Qt::CustomContextMenu);  //默认值 Default->0
     Filelist->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
 
+    QWidget *statusShow = ui->statusShow;
+    statusShow->setVisible(false);
+    statusShow->setDisabled(true);
 
-
+    QPushButton *TaskQueue = ui->pushButton_TaskQueue;
 
 
     //这个所谓的menu本质上是一个enmu枚举
@@ -76,7 +82,13 @@ MainWindow::MainWindow(QWidget *parent)
    //需求将QTreeWidget界面下对每个子item添加右键菜单 课是QTreeWidget自带的方法并没有这种设置 怎么办?
    //思路:先检测对treewidget的点击 然后检测被点击的item是左键还是右键 右键时执行qMenu
     QObject::connect(Filelist,SIGNAL(itemPressed(QTreeWidgetItem*,int)),this,SLOT(TreeWidgetItem_Menu(QTreeWidgetItem*,int))); //item按下判断触发
+    QObject::connect(TaskQueue,&QPushButton::clicked,this,[&](){showStatus(m_status);}); //item按下判断触发
+
     QObject::connect(ui->tabWidget_contentShow,SIGNAL(tabBarClicked(int)),this,SLOT(LostSelection(int)));
+
+    QObject::connect(this,&MainWindow::connetPressed,DockWidget,&PropertiesWidget::clearStatusList);
+    QObject::connect(IP_controlPanelWindow,&IP_controlPanel::connetPressed,DockWidget,&PropertiesWidget::clearStatusList);
+
 
 }
 
@@ -293,7 +305,9 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
                 //还真是 解释:因为itemAccess 是一个 非 静态成员函数 所以需要一个对象来调用
                 //而lambda本身 没有主体对象 所以需要引入一个主体对象来调用itemAccess 这里的this指代mainwindow
 
-            });
+        });
+
+        // QObject::connect(Download,&QAction::triggered,DockWidget,&PropertiesWidget::AddStatusList);
 
     }
 
@@ -407,7 +421,10 @@ void MainWindow::Tab_pressed(){
    QString ActionName = Action->text();
 
    if(ActionName == "IP控制台"){
-       IP_controlPanelWindow->show();
+      IP_controlPanelWindow->show();
+
+
+       //那就先拿你当临时触发器好了..
    }
 
    else{
@@ -441,23 +458,51 @@ void MainWindow::LostSelection(int column){
     ui->Filelist->clearSelection();
 }
 
+void MainWindow::showStatus(bool &m_status){
+    if(m_status == false){
+        ui->statusShow->setVisible(true);
+        ui->statusShow->setDisabled(false);
+        m_status = true;
+    }
+
+    else{
+        ui->statusShow->setVisible(false);
+        ui->statusShow->setDisabled(true);
+        m_status = false;
+    }
+    
+}
+
+void MainWindow::clearStatusList(){
+    qDebug("clear your List");
+}
+
 //快捷键定义区
 
-//keyPressEvent 重载
+//keyPressEvent 事件 不同于 信号与槽的高度封装 事件通常需要手动去配置 但同时自由度也比事件与槽高的多
 void MainWindow::keyPressEvent(QKeyEvent *event){
-    if (event->key() == Qt::Key_Return){
-        QTreeWidgetItem *listItem = ui->Filelist->selectedItems().at(0);
+    switch(event->key()){
+        case Qt::Key_Return: {
+            QTreeWidgetItem *listItem = ui->Filelist->selectedItems().at(0);
             if (listItem != nullptr){
                 emit ui->Filelist->itemDoubleClicked(listItem, 0); //回车->选择列表的双击
             }
+            break;
         }
+
+        case Qt::Key_Backspace:{
+            if(!LinkVector.size()){
+                QTreeWidgetItem *UpperFolder = ui->Filelist->topLevelItem(0);
+                emit ui->Filelist->itemDoubleClicked(UpperFolder, 0); //退格->表示双击上层
+                break;
+            }
+            
+        }
+
+        
+
+    }
+
+
 }
 
-//void MainWindow::mousePressEvent(QMouseEvent *event){
-//    QModelIndex index = ui->Filelist->indexAt(event->pos());
-
-//    if(!index.isValid()){
-//        qDebug("lost the selection");
-//        ui->Filelist->clearSelection();
-//    }
-//}

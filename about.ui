@@ -36,7 +36,7 @@
      <item>
       <widget class="QLabel" name="AboutVersion">
        <property name="text">
-        <string>version:-2</string>
+        <string>version:-3</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -50,7 +50,7 @@
      <item>
       <widget class="QLabel" name="AboutTime">
        <property name="text">
-        <string>Build Time:23.3.15</string>
+        <string>Build Time:23.3.27</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>

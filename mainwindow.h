@@ -6,8 +6,8 @@
 
 #include "about.h"
 #include "ip_controlpanel.h" //sub .h include done.
+#include "propertieswidget.h"
 
-// class IP_controlPanel; //前置声明
 
 QT_BEGIN_NAMESPACE
 namespace Ui { 
@@ -31,7 +31,7 @@ private:
     Ui::MainWindow *ui; //从此Mainwindow下的指代的指针则为ui  MainWindow *ui = new Ui::MainWindow();
     About *AboutWindow;
     IP_controlPanel *IP_controlPanelWindow;
-
+    PropertiesWidget *DockWidget;
 
 
 private slots:
@@ -39,6 +39,7 @@ private slots:
     void itemAccess(QTreeWidgetItem *listItem, int column);
     bool TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column);
     void menu_blank();
+
 
     // void menuPressSlot();
 
@@ -63,6 +64,13 @@ private slots:
 
 
     void LostSelection(int column);
+
+    void showStatus(bool&);
+
+    void clearStatusList();
+
+signals:
+    void connetPressed();
 
 };
 

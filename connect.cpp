@@ -170,7 +170,7 @@ void ReadTheFile(QString &Qpath,std::string &Information){
         Information = std::move(Data);
         TargetFile.close();
 
-        qDebug("the size of the File:%zu",Data.size());
+        qDebug("the size of the File:%zu",Information.size());
 
     }
 

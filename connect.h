@@ -2,14 +2,14 @@
 #define CONNECT_H
 
 #include <string>
-#include <QObject>
 
+#include <QDebug>
+#include <QObject>
 #include "./dependences/extern_lib/httplib.h"
 
-class Connect{
-private:
-	void Abort();
 
+class Connect:public QObject{
+    Q_OBJECT
 public:
     bool cliPing(QString& IP,int& Port);
 
@@ -17,26 +17,25 @@ public:
     std::string cliFileSurfing(QString& IP,int& Port,QString& Postition);
 
     
+    // int cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName);
     void cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName);
+    void cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName,QString& itemSize);
+//    void cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName,std::string& currentName,std::vector<std::string> &TaskVector);
     void cliFileUpload(QString& IP,int& Port,QString& TargetPosition,httplib::MultipartFormDataItems &items);
+
+    // void DownloadSpeed(QString& itemName, float& FProgress);
 
     std::string ReadTheFile(QString &Qpath,std::string &Information);
 
-
-};
-
-class HTMLServer{
-
-public:
-	void serverCreate(QString& IP);
-};
-
-class JsonParse{
 private:
-    std::string ParseJsonString(std::string& document);
+    void Abort();
+
+signals:
+//    void Downloading(int& progress);
+
+    void testSignal(QString& itemName,float& FProgress);
+    void Downloading(std::map<std::string,int> &TaskMap,std::string& Name,int &Progress);
+
 };
-
-//想了想 还是不把它们当作一个类进行存放 直接以组合的形式放到这就好 或者是? 直接作为static声明
-
 
 #endif

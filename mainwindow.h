@@ -37,8 +37,10 @@ private:
 private slots:
     void Tab_pressed();
     void itemAccess(QTreeWidgetItem *listItem, int column);
-    bool TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column);
+    bool FileList_Menu(QTreeWidgetItem *listItem, int column);
     void menu_blank();
+
+    // void updatePropertiesProgress(size_t& Progress,QTreeWidgetItem* listItem);
 
 
     // void menuPressSlot();
@@ -71,6 +73,9 @@ private slots:
 
 signals:
     void connetPressed();
+    void DownloadPressed(const char* Status,QTreeWidgetItem*);
+
+    // void DownloadPressed(std::string& Status,QTreeWidgetItem*);
 
 };
 

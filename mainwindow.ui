@@ -127,16 +127,6 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="Tab_TaskQueue">
-       <attribute name="title">
-        <string>TaskQueue</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_6">
-        <item>
-         <layout class="QVBoxLayout" name="TaskQueue"/>
-        </item>
-       </layout>
-      </widget>
       <widget class="QWidget" name="Tab_log">
        <attribute name="title">
         <string>Log</string>

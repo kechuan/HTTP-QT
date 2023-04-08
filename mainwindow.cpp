@@ -2,8 +2,6 @@
 #include "./ui_mainwindow.h"
 #include "connect.h"
 
-//#include "ui_propertieswidget.h"    //子窗体头文件
-
 #include "./dependences/HTMLFliter.h"
 
 #include <QDebug>
@@ -16,10 +14,20 @@
 
 #include <vector>
 
+#include <future>
+#include <chrono>
+
+#define readyStatus std::future_status::ready
+#define timeoutStatus std::future_status::timeout
+
+// std::future_status result_status;
+
 std::vector<std::string> LinkVector = {};
 std::vector<std::string> PathVector = {};
 std::vector<std::string> NameVector = {};
 std::vector<std::string> SizeVector = {};
+
+std::map<std::string,int> TaskMap = {}; //store:taskName 鉴于我只需要index->string 应该使用map?
 
 QString FullIP;
 int Port;
@@ -30,7 +38,9 @@ QString ParentPath;
 
 bool m_status = false;
 
+
 Connect Client1;
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -81,13 +91,23 @@ MainWindow::MainWindow(QWidget *parent)
 
    //需求将QTreeWidget界面下对每个子item添加右键菜单 课是QTreeWidget自带的方法并没有这种设置 怎么办?
    //思路:先检测对treewidget的点击 然后检测被点击的item是左键还是右键 右键时执行qMenu
-    QObject::connect(Filelist,SIGNAL(itemPressed(QTreeWidgetItem*,int)),this,SLOT(TreeWidgetItem_Menu(QTreeWidgetItem*,int))); //item按下判断触发
+    QObject::connect(Filelist,SIGNAL(itemPressed(QTreeWidgetItem*,int)),this,SLOT(FileList_Menu(QTreeWidgetItem*,int))); //item按下判断触发
     QObject::connect(TaskQueue,&QPushButton::clicked,this,[&](){showStatus(m_status);}); //item按下判断触发
 
     QObject::connect(ui->tabWidget_contentShow,SIGNAL(tabBarClicked(int)),this,SLOT(LostSelection(int)));
 
     QObject::connect(this,&MainWindow::connetPressed,DockWidget,&PropertiesWidget::clearStatusList);
     QObject::connect(IP_controlPanelWindow,&IP_controlPanel::connetPressed,DockWidget,&PropertiesWidget::clearStatusList);
+
+    // QObject::connect(this,&MainWindow::DownloadPressed,DockWidget,&PropertiesWidget::AddTaskQueue);
+
+    //QObject是一个抽象类 似乎因为如此 connect需要用引用符号获得它的地址来进行操作
+
+    //我真的特别谢谢QT还保留了地址的重载写法。。
+    //QObject::connect(&Client1,&Connect::Downloading,DockWidget,&PropertiesWidget::testSlot);
+
+    //confused
+    QObject::connect(&Client1,&Connect::testSignal,DockWidget,&PropertiesWidget::testSlot);
 
 
 }
@@ -137,14 +157,14 @@ qapplication
 
 */
 
-bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
+bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
     //那么其逻辑实际上等于 treewidgetitem作用域+全局右键判断
     if(qApp->mouseButtons() != Qt::RightButton) return false;
 
     qDebug()<<"right triggered";
 
     QString itemSize = listItem->text(2);
-    QMenu *popmenu = new QMenu;
+    QMenu *FileList_popmenu = new QMenu;
 
     //general way
     QAction *Refresh = new QAction("Refresh");
@@ -154,15 +174,14 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
     QAction *Upload = new QAction("Upload Files here...");
 
 
-    popmenu->addAction(Refresh);
-    popmenu->addAction(Delete);
-    popmenu->addAction(NewDir);
-    popmenu->addAction(Rename);
-    popmenu->addAction(Upload);
+    FileList_popmenu->addAction(Refresh);
+    FileList_popmenu->addAction(Delete);
+    FileList_popmenu->addAction(NewDir);
+    FileList_popmenu->addAction(Rename);
+    FileList_popmenu->addAction(Upload);
 
 
     //signal Trigger add.
-    // QObject::connect(Refresh,SIGNAL(triggered(bool)),this,SLOT(Refresh()));
     QObject::connect(
         Refresh,
         &QAction::triggered,
@@ -187,7 +206,6 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
     QObject::connect(Delete,SIGNAL(triggered(bool)),this,SLOT(Delete()));
     QObject::connect(NewDir,SIGNAL(triggered(bool)),this,SLOT(NewDir()));
     QObject::connect(Rename,SIGNAL(triggered(bool)),this,SLOT(Rename()));
-//    QObject::connect(Upload,SIGNAL(triggered(bool)),this,SLOT(Upload()));
 
     QObject::connect(
         Upload,
@@ -293,7 +311,7 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
 
         }
 
-        popmenu->insertAction(Refresh,Download);
+        FileList_popmenu->insertAction(Refresh,Download);
         //signal Trigger add. but new QT5 string
 
         QObject::connect(
@@ -307,7 +325,7 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
 
         });
 
-        // QObject::connect(Download,&QAction::triggered,DockWidget,&PropertiesWidget::AddStatusList);
+        QObject::connect(Download,&QAction::triggered,this,[listItem, this](){emit DownloadPressed("Downloading",listItem);});
 
     }
 
@@ -318,15 +336,17 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
         //Action add.
         QAction *Open = new QAction("Open");
 
-        popmenu->insertAction(Refresh,Open);
+        FileList_popmenu->insertAction(Refresh,Open);
 
         //signal Trigger add.
+        //二度lambda 需要 通过this以及手动capture来捕获
         QObject::connect(Open,&QAction::triggered,this,[listItem,&column,this](){itemAccess(listItem,column);});
+
 
     }
 
-     popmenu->move(ui->Filelist->cursor().pos());    //菜单显示在鼠标点击的位置
-     popmenu->show();
+     FileList_popmenu->move(ui->Filelist->cursor().pos());    //菜单显示在鼠标点击的位置
+     FileList_popmenu->show();
 
      return true;
 
@@ -334,33 +354,52 @@ bool MainWindow::TreeWidgetItem_Menu(QTreeWidgetItem *listItem, int column){
 
 void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
-//   QString itemIcon = listItem->text(0);
-   QString itemName = listItem->text(1);
-   QString itemSize = listItem->text(2);
-   QString itemLink = listItem->text(3);
+//这里的column代表这一行里点击的位置判定(Icon->0/FileName->1/Size->2...) 不过我并没有对column作出什么更改需求
 
-   if(itemSize!="—"){
+//  QString selectedListsIcon = listItem->text(0);
+    QString selectedListsName = listItem->text(1);
+    QString selectedListsSize = listItem->text(2);
+    QString selectedListsLink = listItem->text(3);
+
+    if(selectedListsSize!="—"){
         QTreeWidget *Filelist = ui->Filelist;
         QList selectedList = Filelist->selectedItems();
 
         if(selectedList.size()>1){
             for(auto &i:selectedList){
-                QString selectedListsName = i->text(1);
-                QString selectedListsLink = i->text(3);
-                qDebug("you selected the %s,which size is:%s",i->text(1).toStdString().c_str(),i->text(2).toStdString().c_str());
-                Client1.cliFileDownload(FullIP,Port,selectedListsLink,selectedListsName);
+                QString selectedName = i->text(1);
+                QString selectedSize = i->text(2);
+                QString selectedLink = i->text(3);
+
+                qDebug("you selected the %s,which size is:%s",selectedName.toStdString().c_str(),selectedSize.toStdString().c_str());
+
+                std::shared_future<void> Record = std::async([&](){
+                    return Client1.cliFileDownload(FullIP,Port,selectedLink,selectedName,selectedSize);
+                });
+
             }
         }
 
         else{
-            qDebug("you selected the %s,which size is:%s",itemName.toStdString().c_str(),itemSize.toStdString().c_str());
-            Client1.cliFileDownload(FullIP,Port,itemLink,itemName);
+
+            qDebug("you selected the %s,which size is:%s",selectedListsName.toStdString().c_str(),selectedListsSize.toStdString().c_str());
+
+            //async 类内函数调用方式
+            std::shared_future<void> Record = std::async([&](){
+                return Client1.cliFileDownload(FullIP,Port,selectedListsLink,selectedListsName,selectedListsSize);
+            });
+
+
+
+
         }
+
+        
     }
 
    else{
-       qDebug("double clicked the itemName %s, it linked is:%s",itemName.toStdString().c_str(),itemLink.toStdString().c_str()); //colnmun指代 子信息
-       std::string Information = Client1.cliFileSurfing(FullIP,Port,itemLink);
+       qDebug("double clicked the itemName %s, it linked is:%s",selectedListsName.toStdString().c_str(),selectedListsLink.toStdString().c_str()); //colnmun指代 子信息
+       std::string Information = Client1.cliFileSurfing(FullIP,Port,selectedListsLink);
 
        HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
 
@@ -385,7 +424,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         QList<QString> newItemInformation{"-","..","—",ParentPath};
         ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
-        if(itemName==".."&&itemLink==rootPath){
+        if(selectedListsName==".."&&selectedListsLink==rootPath){
            qDebug("redirect to the disk select.");
 
            Information = Client1.cliFileSurfing(FullIP,Port,rootPath);

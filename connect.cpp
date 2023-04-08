@@ -2,27 +2,28 @@
 
 #include <QDebug>
 #include <fstream>
-#include <filesystem>
+#include <filesystem> //C++ 17 to solve fstream wchar problem.
+
+#include <future>
+#include <chrono> //c++ 11计时库
+
+#include <regex>
+
+#define readyStatus std::future_status::ready
+#define timeoutStatus std::future_status::timeout
+
 
 #include "./dependences/extern_lib/httplib.h"
-#include "./dependences/extern_lib/json.hpp"
-
-// #define readyStatus std::future_status::ready
-// #define timeoutStatus std::future_status::timeout
 
 using namespace httplib;
 
 //C++ 11 using alias for class/template
 
 using string = std::string;
-using json = nlohmann::json;
 
-// std::smatch match;
-
-//std::future_status status;
+extern std::map<std::string,int> TaskMap;
 
 void WriteToFile(std::string& FileName,std::string& Data); //预声明
-
 
 void Connect::Abort(){
     qDebug()<<"connect Abort.";
@@ -53,30 +54,75 @@ std::string Connect::cliFileSurfing(QString& IP,int& Port,QString& Postition){
     return body;
 }
 
-
-void Connect::cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName){
+void Connect::cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName,QString& itemSize){
     Client cli(IP.toStdString(),Port);
-    std::string fileName = itemName.toStdString().c_str();
+    std::string fileName = itemName.toStdString();
 
     qDebug("download trigger Link:%s",Postition.toStdString().c_str());
 
-
     std::string path = "./downloads/";
-    path.append(fileName.c_str());
-    // qDebug("FileName:%s",path.c_str());
+    path.append(fileName);
+    qDebug("FileName:%s",path.c_str());
 
     std::string body;
+    std::string total_size = itemSize.toStdString();
 
-    auto res = cli.Get(Postition.toStdString().c_str(),
+    
+
+    std::regex storageReg(R"(\d{1,3}.?\d{2}?(B|KB|MB|GB)$)");
+    std::smatch matches;
+
+    std::regex_search(total_size, matches, storageReg);
+    std::string storageType = std::move(matches[1]); //captureList group1
+
+    double fliterSize;
+
+    if(storageType=="B"){
+        total_size = std::move(matches[0]);
+        fliterSize = stoi(total_size);
+    }
+
+    else if(storageType=="KB"){
+        total_size = std::move(matches[0]);
+        fliterSize = stod(total_size);
+        fliterSize*=1024;
+    }
+
+    else if(storageType=="MB"){
+        total_size = std::move(matches[0]);
+        fliterSize = stod(total_size);
+        fliterSize = fliterSize*1024*1024;
+    }
+
+    else{
+        total_size = std::move(matches[0]);
+        fliterSize = stod(total_size);
+        fliterSize = fliterSize*1024*1024*1024;
+    }
+
+    int intervalflag = 0;
+    float FProgress;
+
+    emit testSignal(itemName,FProgress);//进度条初始化
+
+    auto res = cli.Get(Postition.toStdString(),
       [&](const char *data, size_t data_length) {
         body.append(std::move(data), data_length);
-        return true;
-     });
+        
+        FProgress = (body.size()*100/fliterSize);
+        if(intervalflag == 1000){
+            intervalflag = 0;
+            emit testSignal(itemName,FProgress);
+        }
 
+        ++intervalflag;
+       return true;
+    });
 
-    qDebug("FileSize:%zu",body.size());
+    emit testSignal(itemName,FProgress);
+    qDebug("Connect.cpp Line 84:FileSize:%zu",body.size());
     WriteToFile(fileName,body);
-    
+
 }
 
 

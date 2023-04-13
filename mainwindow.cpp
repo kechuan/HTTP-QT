@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+
 #include "connect.h"
 
 #include "./dependences/HTMLFliter.h"
@@ -17,6 +18,9 @@
 #include <future>
 #include <chrono>
 
+
+#include <QtConcurrent/QtConcurrent>
+
 #define readyStatus std::future_status::ready
 #define timeoutStatus std::future_status::timeout
 
@@ -27,10 +31,9 @@ std::vector<std::string> PathVector = {};
 std::vector<std::string> NameVector = {};
 std::vector<std::string> SizeVector = {};
 
-std::map<std::string,int> TaskMap = {}; //store:taskName 鉴于我只需要index->string 应该使用map?
+//std::map<std::string,int> TaskMap = {}; //store:taskName 鉴于我只需要index->string 应该使用map?
 
-QString FullIP;
-int Port;
+QString FullIP;int Port;
 
 QString rootPath = "/file";
 QString SurfingPath;
@@ -38,9 +41,7 @@ QString ParentPath;
 
 bool m_status = false;
 
-
 Connect Client1;
-
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -55,7 +56,7 @@ MainWindow::MainWindow(QWidget *parent)
     AboutWindow->hide();
 
     IP_controlPanelWindow = new IP_controlPanel(nullptr,ui);
-    IP_controlPanelWindow->hide();
+    IP_controlPanelWindow->show();
 
     DockWidget = new PropertiesWidget(ui->statusShow,ui); //显示在statusShow里
     DockWidget->show();
@@ -99,27 +100,17 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(this,&MainWindow::connetPressed,DockWidget,&PropertiesWidget::clearStatusList);
     QObject::connect(IP_controlPanelWindow,&IP_controlPanel::connetPressed,DockWidget,&PropertiesWidget::clearStatusList);
 
-    // QObject::connect(this,&MainWindow::DownloadPressed,DockWidget,&PropertiesWidget::AddTaskQueue);
 
     //QObject是一个抽象类 似乎因为如此 connect需要用引用符号获得它的地址来进行操作
-
     //我真的特别谢谢QT还保留了地址的重载写法。。
-    //QObject::connect(&Client1,&Connect::Downloading,DockWidget,&PropertiesWidget::testSlot);
-
     //confused
-    QObject::connect(&Client1,&Connect::testSignal,DockWidget,&PropertiesWidget::testSlot);
 
+    //*UI不能即时更新
+    // QObject::connect(&Client1,&Connect::testSignal,DockWidget,&PropertiesWidget::testSlot);
 
 }
 
 //事件声明区
-
-//空白区域
-void MainWindow::menu_blank()
-{
-    QMessageBox::warning(this,tr("提示"),tr("树的根节点！")); //table returning?
-}
-
 MainWindow::~MainWindow()
 {
     delete ui;
@@ -156,6 +147,16 @@ qapplication
 不过值得一提的是 通过qAPP的传入 调用它的方法也变成了指针样式了
 
 */
+
+
+void AddTreeWidgetItems(QList<QString> &newItemInformation,std::vector<std::string> &NameVector,std::vector<std::string> &SizeVector,std::vector<std::string> &LinkVector){
+    for(int index = 0;index<=SizeVector.size()-1;++index){
+        QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
+        QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
+        Ui::MainWindow *ui;
+        ui->Filelist->addTopLevelItem(newItem);
+    }
+}
 
 bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
     //那么其逻辑实际上等于 treewidgetitem作用域+全局右键判断
@@ -321,7 +322,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
             [listItem,&column,this](){          //为什么要加this?
                 itemAccess(listItem,column); //有可能是 不用this 就无法调用itemAccess?
                 //还真是 解释:因为itemAccess 是一个 非 静态成员函数 所以需要一个对象来调用
-                //而lambda本身 没有主体对象 所以需要引入一个主体对象来调用itemAccess 这里的this指代mainwindow
+                //而在两次嵌套的lambda本身 已经没有了主体对象 所以需要引入一个主体对象来调用itemAccess 这里的this指代mainwindow
 
         });
 
@@ -388,8 +389,6 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
             std::shared_future<void> Record = std::async([&](){
                 return Client1.cliFileDownload(FullIP,Port,selectedListsLink,selectedListsName,selectedListsSize);
             });
-
-
 
 
         }
@@ -461,9 +460,6 @@ void MainWindow::Tab_pressed(){
 
    if(ActionName == "IP控制台"){
       IP_controlPanelWindow->show();
-
-
-       //那就先拿你当临时触发器好了..
    }
 
    else{
@@ -493,7 +489,6 @@ void MainWindow::Cut(){
 }
 
 void MainWindow::LostSelection(int column){
-//    qDebug("lost the selection because of clicked :%d",column);
     ui->Filelist->clearSelection();
 }
 
@@ -538,10 +533,8 @@ void MainWindow::keyPressEvent(QKeyEvent *event){
             
         }
 
-        
 
     }
-
 
 }
 

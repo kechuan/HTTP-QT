@@ -32,16 +32,17 @@ public slots:
    void StatusChanged(int Status,QTreeWidgetItem* listItem);
 
    //Downloading&Uploading
-   void Progresstest(std::map<std::string,int> &TaskMap,std::string& Name,int& Progress);
-   void ProgressUpdate(int& Progress,QTreeWidgetItem* listItem);
-
-   void testSlot(QString& itemName,float& Progress);
-
+   
+  
+   void testSlot(const QString& itemName,const QString& itemSize,float& Progress);
 
    bool TaskList_Menu(QTreeWidgetItem *listItem, int column);
 
-
    void ShowFromExplorer();
+
+   void statusEventLoop(const QString& itemName,const QString& itemSize,float& Progress);
+
+
 
 };
 

@@ -34,7 +34,6 @@ inline std::string HTMLFliter(std::string &Information,std::vector<std::string> 
         MenuContent+=matches[0]; //matches[0] 代表find到的所有东西 同时在新字符串内增加内容 从而实现匹配内容的转移
     }
 
-//    copy_template(MenuContent.begin(),MenuContent.end(),HTMLLinkReg,1,PathVector);
     copy_template(MenuContent,HTMLLinkReg,1,PathVector);
 
     // qDebug("Path.size():%zu\n",PathVector.size());

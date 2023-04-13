@@ -1,19 +1,23 @@
 #include "mainwindow.h"
+#include "qthread.h"
 
 #include <QApplication>
-#include <QLocale>
 #include <QTranslator>
 
-//#include <QtCore/QTextCodec>
+#include "connect.h"
 
-//# pragma execution_character_set("GBK")
 
 int main(int argc, char *argv[])
 {
-//    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
-//    system("chcp 65001");
-//    std::locale::global(std::locale("")); //将运行语言切换成本地
     QApplication a(argc, argv);
+
+    // extern Connect Client1;
+
+    // QThread thread;
+    // Client1.moveToThread(&thread);
+    // thread.start();
+
+    qDebug() << "main thread:" << QThread::currentThreadId();
 
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();

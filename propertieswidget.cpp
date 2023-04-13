@@ -1,21 +1,24 @@
 #include "propertieswidget.h"
+//#include "QtConcurrent/qtconcurrentrun.h"
+//#include "QtConcurrent/qtconcurrentrun.h"
 #include "ui_propertieswidget.h"
 
 #include "DelegateProgressBar.h"
+#include "connect.h"
 
 #include <QtWidgets>
+#include <QThread>
 
 enum StatusList{
     Downloading,
     Uploading,
     Paused,
+    Finished,
     Failed,
-    Finished
+
 };
 
-extern std::map<std::string,int> TaskMap;
-
-int nowProgress = 25;
+extern Connect Client1;
 
 PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QWidget(parent),
@@ -31,8 +34,8 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
 
     QObject::connect(treeWidgetTaskQueue,SIGNAL(itemPressed(QTreeWidgetItem*,int)),this,SLOT(TaskList_Menu(QTreeWidgetItem*,int))); //item按下判断触发
 
-    //进度条实例
-//    ProgressBarDelegate delegate(treeWidgetTaskQueue);
+    QObject::connect(&Client1,&Connect::testSignal,this,&PropertiesWidget::statusEventLoop);
+
 
 
 }
@@ -62,16 +65,10 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
     //Failed
     QAction *Remove = new QAction("Remove");
 
-    QAction *ChangeProgress = new QAction("ChangeProgress");
-
     TaskList_popmenu->addAction(Pause);
     TaskList_popmenu->addAction(Resume);
     TaskList_popmenu->addAction(Open);
     TaskList_popmenu->addAction(Remove);
-
-    TaskList_popmenu->addAction(ChangeProgress);
-
-
 
 
     if(Status!="Finished"){
@@ -91,12 +88,13 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
     QObject::connect(Pause,&QAction::triggered,this,[listItem,this](){StatusChanged(Paused,listItem);});
     QObject::connect(Resume,&QAction::triggered,this,[listItem,this](){StatusChanged(Downloading,listItem);});
 
-    QObject::connect(ChangeProgress,&QAction::triggered,this,[listItem,this](){ProgressUpdate(nowProgress,listItem);});
     QObject::connect(Open,&QAction::triggered,this,[this](){ShowFromExplorer();});
 
     return true;
 
 }
+
+
 
 
 //signals:
@@ -129,11 +127,24 @@ void PropertiesWidget::AddTaskQueue(const char* Status,QTreeWidgetItem *listItem
     qDebug("topLevelItemCount:%d",treeWidgetTaskQueue->topLevelItemCount());
 }
 
-void PropertiesWidget::ProgressUpdate(int& Progress,QTreeWidgetItem* listItem){
-    listItem->setData(2, Qt::UserRole, Progress);
+void PropertiesWidget::statusEventLoop(const QString& itemName,const QString& itemSize,float& Progress){
+    QEventLoop statusLoop;
+
+    qRegisterMetaType<float&>("float&");
+    QMetaObject::invokeMethod(this, "testSlot", Q_ARG(QString, itemName), Q_ARG(QString, itemSize), Q_ARG(float&, Progress));
+    qApp->processEvents(QEventLoop::AllEvents,5);
+
+
+    QTimer::singleShot(20, &statusLoop, SLOT(quit())); //20ms后执行退出
+    statusLoop.exec();
+
 }
 
-void PropertiesWidget::testSlot(QString& itemName,float& Progress){
+void PropertiesWidget::testSlot(const QString& itemName,const QString& itemSize,float& Progress){
+
+//    QEventLoop statusLoop;
+
+    qDebug() << "from thread slot:" << QThread::currentThreadId();
 
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
     Qt::MatchFlags flag = Qt::MatchExactly;
@@ -141,44 +152,39 @@ void PropertiesWidget::testSlot(QString& itemName,float& Progress){
     QList matchList = treeWidgetTaskQueue->findItems(itemName,flag,1);
 
     if(!matchList.size()){
-        // Status,Filename,Progress,Size,Speed,DateTime
-        QList<QString> newItemInformation{"Downloading",itemName,"null",itemName,"null","DateTime"};
 
-            treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
-            ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
-            treeWidgetTaskQueue->setItemDelegateForColumn(2, progressBar);
+        // Status,Filename,Progress,Size,Speed,DateTime
+        QList<QString> newItemInformation{"Downloading",itemName,"null",itemSize,"null","DateTime"};
+        ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
+
+        treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+        treeWidgetTaskQueue->setItemDelegateForColumn(2, progressBar);
 
         qDebug("topLevelItemCount:%d",treeWidgetTaskQueue->topLevelItemCount());
-
-        return; //不存在时 跳过 等待下次更新
     }
 
     else{
         QTreeWidgetItem *currentItem = matchList.at(0);
-        currentItem->setData(2, Qt::UserRole, (int)Progress); //数据更新
+
+
+            currentItem->setData(2, Qt::UserRole, Progress); //数据更新
+
+            qApp->processEvents(QEventLoop::AllEvents,8);
+
+            if(static_cast<int>(round(Progress))==100){
+                qDebug("%s Download Complete!",itemName.toStdString().c_str());
+                StatusChanged(3,currentItem);
+            }
+
+
+
         qDebug("itemName:%s,Progress:%f",itemName.toStdString().c_str(),Progress);
     }
 
-}
 
 
-void PropertiesWidget::Progresstest(std::map<std::string,int> &TaskMap,std::string& Name,int &Progress){
-    QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
-    Qt::MatchFlags flag = Qt::MatchExactly;
-
-    //find的结果储存在QList里面
-    QTreeWidgetItem *currentItem = treeWidgetTaskQueue->findItems(QString::fromStdString(Name),flag,1).at(0);
-
-    auto MapcurrentItem = TaskMap.find(Name);
-
-    qDebug("%s Progress:%d",currentItem->text(2).toStdString().c_str(),MapcurrentItem->second);
-
-    currentItem->setData(2, Qt::UserRole, Progress);
 
 }
-
-
-
 
 void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 

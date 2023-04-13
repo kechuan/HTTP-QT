@@ -33,12 +33,14 @@ private:
     IP_controlPanel *IP_controlPanelWindow;
     PropertiesWidget *DockWidget;
 
+    QThread *thread; // 定义一个 QThread 的指针
+
+
 
 private slots:
     void Tab_pressed();
     void itemAccess(QTreeWidgetItem *listItem, int column);
     bool FileList_Menu(QTreeWidgetItem *listItem, int column);
-    void menu_blank();
 
     // void updatePropertiesProgress(size_t& Progress,QTreeWidgetItem* listItem);
 

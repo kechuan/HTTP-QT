@@ -20,6 +20,8 @@ public:
     //那么第二个呢? 则是指代需要获取ui信息的window
     ~IP_controlPanel();
 
+    void keyPressEvent(QKeyEvent *event); //keyboard Event
+
     
     
 

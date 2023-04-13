@@ -1,5 +1,5 @@
 #include "connect.h"
-
+#include "qtimer.h"
 #include <QDebug>
 #include <fstream>
 #include <filesystem> //C++ 17 to solve fstream wchar problem.
@@ -55,6 +55,7 @@ std::string Connect::cliFileSurfing(QString& IP,int& Port,QString& Postition){
 }
 
 void Connect::cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName,QString& itemSize){
+
     Client cli(IP.toStdString(),Port);
     std::string fileName = itemName.toStdString();
 
@@ -66,8 +67,6 @@ void Connect::cliFileDownload(QString& IP,int& Port,QString& Postition,QString& 
 
     std::string body;
     std::string total_size = itemSize.toStdString();
-
-    
 
     std::regex storageReg(R"(\d{1,3}.?\d{2}?(B|KB|MB|GB)$)");
     std::smatch matches;
@@ -103,7 +102,13 @@ void Connect::cliFileDownload(QString& IP,int& Port,QString& Postition,QString& 
     int intervalflag = 0;
     float FProgress;
 
-    emit testSignal(itemName,FProgress);//进度条初始化
+//    qRegisterMetaType<float&>("float&");
+    //???连我也看不懂为什么invokeMethod不会自带注册float& 但是神奇的是
+    //如果直接float糊脸 md 槽函数就会认为是float 因此与 float& 不相同而不响应
+
+    // QTimer::singleShot(0, this, SIGNAL(testSignal(itemName,FProgress)));
+    //QMetaObject::invokeMethod(this, "testSignal", Q_ARG(QString, itemName), Q_ARG(QString, itemSize), Q_ARG(float&, FProgress));
+    emit testSignal(itemName,itemSize,FProgress);
 
     auto res = cli.Get(Postition.toStdString(),
       [&](const char *data, size_t data_length) {
@@ -112,20 +117,21 @@ void Connect::cliFileDownload(QString& IP,int& Port,QString& Postition,QString& 
         FProgress = (body.size()*100/fliterSize);
         if(intervalflag == 1000){
             intervalflag = 0;
-            emit testSignal(itemName,FProgress);
+            emit testSignal(itemName,itemSize,FProgress);
         }
 
         ++intervalflag;
        return true;
     });
 
-    emit testSignal(itemName,FProgress);
+    emit testSignal(itemName,itemSize,FProgress);
+
+    qDebug() << "Connect.cpp Line 124: thread cliFileDownload" << QThread::currentThreadId();
+
     qDebug("Connect.cpp Line 84:FileSize:%zu",body.size());
     WriteToFile(fileName,body);
 
 }
-
-
 
 void Connect::cliFileUpload(QString& IP,int& Port,QString& QTargetPosition,httplib::MultipartFormDataItems &items){
     Client cli(IP.toStdString(),Port);

@@ -7,6 +7,7 @@
 #include <QObject>
 #include "./dependences/extern_lib/httplib.h"
 
+#include <QThread>
 
 class Connect:public QObject{
     Q_OBJECT
@@ -17,13 +18,8 @@ public:
     std::string cliFileSurfing(QString& IP,int& Port,QString& Postition);
 
     
-    // int cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName);
-    void cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName);
     void cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName,QString& itemSize);
-//    void cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName,std::string& currentName,std::vector<std::string> &TaskVector);
     void cliFileUpload(QString& IP,int& Port,QString& TargetPosition,httplib::MultipartFormDataItems &items);
-
-    // void DownloadSpeed(QString& itemName, float& FProgress);
 
     std::string ReadTheFile(QString &Qpath,std::string &Information);
 
@@ -31,9 +27,7 @@ private:
     void Abort();
 
 signals:
-//    void Downloading(int& progress);
-
-    void testSignal(QString& itemName,float& FProgress);
+    void testSignal(const QString& itemName,const QString& itemSize,float &FProgress);
     void Downloading(std::map<std::string,int> &TaskMap,std::string& Name,int &Progress);
 
 };

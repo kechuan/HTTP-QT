@@ -1,6 +1,6 @@
 #include "ip_controlpanel.h"
+#include <QKeyEvent>
 #include "ui_ip_controlpanel.h"
-//#include "propertieswidget.h"
 
 #include "connect.h"
 #include "./dependences/HTMLFliter.h"
@@ -29,6 +29,9 @@ IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
 
     QObject::connect(ui->pushButton_Connect,SIGNAL(released()),this,SLOT(action_pressed()));
     QObject::connect(ui->pushButton_Abort,SIGNAL(released()),this,SLOT(action_pressed()));
+
+    QObject::connect(ui->pushButton_Connect,SIGNAL(pressed()),this,SLOT(action_pressed()));
+
 
 //    PropertiesWidget *DockWidget = PropertiesWidget();
 
@@ -98,6 +101,19 @@ void IP_controlPanel::action_pressed(){
 
 
         }
+
+}
+
+
+//快捷键定义区
+void IP_controlPanel::keyPressEvent(QKeyEvent *event){
+    switch(event->key()){
+        case Qt::Key_Return: {
+            emit ui->pushButton_Connect->pressed();
+            qDebug("IP_controlPanel return pressed");
+            break;
+        }
+    }
 
 }
 

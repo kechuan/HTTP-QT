@@ -3,7 +3,6 @@
 
 #include "qpainter.h"
 #include "qprogressbar.h"
-//#include "qspinbox.h"
 #include "qstyleditemdelegate.h"
 
 

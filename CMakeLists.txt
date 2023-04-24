@@ -28,6 +28,7 @@ set(PROJECT_SOURCES
         ip_controlpanel.cpp ip_controlpanel.h ip_controlpanel.ui
         propertieswidget.cpp propertieswidget.h propertieswidget.ui
         DelegateProgressBar.h
+        updateUiThread.h
 
         ${TS_FILES}
 )

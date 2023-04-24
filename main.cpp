@@ -4,18 +4,12 @@
 #include <QApplication>
 #include <QTranslator>
 
-#include "connect.h"
+
 
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-
-    // extern Connect Client1;
-
-    // QThread thread;
-    // Client1.moveToThread(&thread);
-    // thread.start();
 
     qDebug() << "main thread:" << QThread::currentThreadId();
 
@@ -28,6 +22,7 @@ int main(int argc, char *argv[])
             break;
         }
     }
+
      MainWindow w;
      w.show();
 

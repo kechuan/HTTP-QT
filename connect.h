@@ -18,7 +18,7 @@ public:
     std::string cliFileSurfing(QString& IP,int& Port,QString& Postition);
 
     
-    void cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName,QString& itemSize);
+    void cliFileDownload(QString& IP,int& Port,QString& itemLink,QString& itemName,QString& itemSize);
     void cliFileUpload(QString& IP,int& Port,QString& TargetPosition,httplib::MultipartFormDataItems &items);
 
     std::string ReadTheFile(QString &Qpath,std::string &Information);
@@ -27,7 +27,7 @@ private:
     void Abort();
 
 signals:
-    void testSignal(const QString& itemName,const QString& itemSize,float &FProgress);
+    void ProgressUpdate(const QString& itemName,const QString& itemSize,QString& itemLink,float &FProgress);
     void Downloading(std::map<std::string,int> &TaskMap,std::string& Name,int &Progress);
 
 };

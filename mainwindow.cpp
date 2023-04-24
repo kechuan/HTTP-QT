@@ -31,13 +31,13 @@ std::vector<std::string> PathVector = {};
 std::vector<std::string> NameVector = {};
 std::vector<std::string> SizeVector = {};
 
-//std::map<std::string,int> TaskMap = {}; //store:taskName 鉴于我只需要index->string 应该使用map?
-
 QString FullIP;int Port;
 
 QString rootPath = "/file";
 QString SurfingPath;
 QString ParentPath;
+
+std::string DownloadPath = "./downloads/";
 
 bool m_status = false;
 
@@ -80,7 +80,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     QPushButton *TaskQueue = ui->pushButton_TaskQueue;
 
-
     //这个所谓的menu本质上是一个enmu枚举
 
    //warning: connect-not-normalized 对于信号与槽 似乎并不需要特别的分配&引用符号 用上普通的方式反而能避免更多的内存开销 真是奇怪
@@ -93,6 +92,7 @@ MainWindow::MainWindow(QWidget *parent)
    //需求将QTreeWidget界面下对每个子item添加右键菜单 课是QTreeWidget自带的方法并没有这种设置 怎么办?
    //思路:先检测对treewidget的点击 然后检测被点击的item是左键还是右键 右键时执行qMenu
     QObject::connect(Filelist,SIGNAL(itemPressed(QTreeWidgetItem*,int)),this,SLOT(FileList_Menu(QTreeWidgetItem*,int))); //item按下判断触发
+    
     QObject::connect(TaskQueue,&QPushButton::clicked,this,[&](){showStatus(m_status);}); //item按下判断触发
 
     QObject::connect(ui->tabWidget_contentShow,SIGNAL(tabBarClicked(int)),this,SLOT(LostSelection(int)));
@@ -147,16 +147,6 @@ qapplication
 不过值得一提的是 通过qAPP的传入 调用它的方法也变成了指针样式了
 
 */
-
-
-void AddTreeWidgetItems(QList<QString> &newItemInformation,std::vector<std::string> &NameVector,std::vector<std::string> &SizeVector,std::vector<std::string> &LinkVector){
-    for(int index = 0;index<=SizeVector.size()-1;++index){
-        QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
-        QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
-        Ui::MainWindow *ui;
-        ui->Filelist->addTopLevelItem(newItem);
-    }
-}
 
 bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
     //那么其逻辑实际上等于 treewidgetitem作用域+全局右键判断
@@ -517,10 +507,22 @@ void MainWindow::clearStatusList(){
 void MainWindow::keyPressEvent(QKeyEvent *event){
     switch(event->key()){
         case Qt::Key_Return: {
-            QTreeWidgetItem *listItem = ui->Filelist->selectedItems().at(0);
-            if (listItem != nullptr){
-                emit ui->Filelist->itemDoubleClicked(listItem, 0); //回车->选择列表的双击
+            QList<QTreeWidgetItem*> selectedTreeWidgetItems = ui->Filelist->selectedItems();
+
+            if(selectedTreeWidgetItems.length()>1){
+                for(auto& TreeItem:selectedTreeWidgetItems){
+                    emit ui->Filelist->itemDoubleClicked(TreeItem, 0); //回车->选择列表的双击
+                }
             }
+
+            else{
+                QTreeWidgetItem *listItem = selectedTreeWidgetItems.at(0);
+                if (listItem != nullptr){
+                    emit ui->Filelist->itemDoubleClicked(listItem, 0); //回车->选择列表的双击
+                }
+            }
+
+            
             break;
         }
 

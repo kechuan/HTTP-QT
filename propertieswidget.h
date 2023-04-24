@@ -17,6 +17,8 @@ public:
     explicit PropertiesWidget(QWidget *parent = nullptr, Ui::MainWindow *m_ui = nullptr);
     ~PropertiesWidget();
 
+    void keyPressEvent(QKeyEvent *event);
+
     Ui::PropertiesWidget *ui;
 
 private:
@@ -25,23 +27,21 @@ private:
 
 public slots:
    void clearStatusList();
-   void AddTaskQueue(const char* Status,QTreeWidgetItem* listItem);
-//    void AddTaskQueue2(int Status,QTreeWidgetItem* listItem);
+
+   //ActionTrigged
+   void ActionPressed();
 
    //StatusChanged
    void StatusChanged(int Status,QTreeWidgetItem* listItem);
 
    //Downloading&Uploading
    
-  
-   void testSlot(const QString& itemName,const QString& itemSize,float& Progress);
+   void ProgressUpdate(const QString& itemName,const QString& itemSize,QString& itemLink,float& Progress);
 
    bool TaskList_Menu(QTreeWidgetItem *listItem, int column);
 
-   void ShowFromExplorer();
-
-   void statusEventLoop(const QString& itemName,const QString& itemSize,float& Progress);
-
+   void OpenFile(QTreeWidgetItem* listItem,int colmun);
+   void OpenFileFromFolder(QTreeWidgetItem* listItem,int colmun);
 
 
 };

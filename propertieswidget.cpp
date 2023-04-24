@@ -1,9 +1,7 @@
 #include "propertieswidget.h"
-//#include "QtConcurrent/qtconcurrentrun.h"
-//#include "QtConcurrent/qtconcurrentrun.h"
 #include "ui_propertieswidget.h"
-
 #include "DelegateProgressBar.h"
+
 #include "connect.h"
 
 #include <QtWidgets>
@@ -19,6 +17,10 @@ enum StatusList{
 };
 
 extern Connect Client1;
+extern std::string DownloadPath;
+
+QList<QTreeWidgetItem*> selectedTreeWidgetItems;
+
 
 PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QWidget(parent),
@@ -30,13 +32,20 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     qDebug()<<"Status created";
 
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
+    treeWidgetTaskQueue->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
+    QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemPressed,this,&PropertiesWidget::TaskList_Menu); //item按下判断触发
+    QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemDoubleClicked,this,&PropertiesWidget::OpenFile);
 
-    QObject::connect(treeWidgetTaskQueue,SIGNAL(itemPressed(QTreeWidgetItem*,int)),this,SLOT(TaskList_Menu(QTreeWidgetItem*,int))); //item按下判断触发
+    QObject::connect(&Client1,&Connect::ProgressUpdate,this,&PropertiesWidget::ProgressUpdate);
 
-    QObject::connect(&Client1,&Connect::testSignal,this,&PropertiesWidget::statusEventLoop);
+    QPushButton *Continued_Button = ui->pushButton_Continue;
+    QPushButton *Paused_Button = ui->pushButton_Pause;
+    QPushButton *Remove_Button = ui->pushButton_Remove;
 
-
+    QObject::connect(Continued_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
+    QObject::connect(Paused_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
+    QObject::connect(Remove_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
 
 }
 
@@ -48,50 +57,83 @@ PropertiesWidget::~PropertiesWidget(){
 //slots:
 bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
 
-    if(qApp->mouseButtons() != Qt::RightButton) return false;
+    selectedTreeWidgetItems = ui->treeWidgetTaskQueue->selectedItems();
+    if(listItem==nullptr) return false;
 
-    QString Status = listItem->text(0);
+    if(qApp->mouseButtons() == Qt::RightButton){
+        QString Status = listItem->text(0);
 
-//    qDebug()<<"right triggered";
+        QMenu *TaskList_popmenu = new QMenu;
 
-    QMenu *TaskList_popmenu = new QMenu;
+        QAction *Pause = new QAction("Pause");
+        QAction *Resume = new QAction("Resume");
 
-    QAction *Pause = new QAction("Pause");
-    QAction *Resume = new QAction("Resume");
+        //Finished
+        QAction *Open = new QAction("Open");
+        QAction *Open_From_Folder = new QAction("Open From FileExplorer");
 
-    //Finished
-    QAction *Open = new QAction("Open");
-
-    //Failed
-    QAction *Remove = new QAction("Remove");
-
-    TaskList_popmenu->addAction(Pause);
-    TaskList_popmenu->addAction(Resume);
-    TaskList_popmenu->addAction(Open);
-    TaskList_popmenu->addAction(Remove);
+        //Failed
+        QAction *Remove = new QAction("Remove");
 
 
-    if(Status!="Finished"){
-        Resume->setEnabled(false);
-        Open->setEnabled(false);
+        //generalArea
+        TaskList_popmenu->addAction(Open);
+
+        TaskList_popmenu->addAction(Pause);
+        TaskList_popmenu->addAction(Resume);
+
+        TaskList_popmenu->addAction(Open_From_Folder);
+
+        TaskList_popmenu->addAction(Remove);
+
+
+        if(Status!="Finished"){
+            Open->setEnabled(false);
+        }
+
+
+        else if(Status=="Paused"){
+            Pause->setEnabled(false);
+            Resume->setEnabled(true);
+        }
+
+        else{
+            Open->setEnabled(false);
+            Resume->setEnabled(false);
+            Pause->setEnabled(true);
+        }
+
+        TaskList_popmenu->move(ui->treeWidgetTaskQueue->cursor().pos());    //菜单显示在鼠标点击的位置
+        TaskList_popmenu->show();
+
+
+        QObject::connect(Pause,&QAction::triggered,this,[listItem,this](){StatusChanged(Paused,listItem);});
+        QObject::connect(Resume,&QAction::triggered,this,[listItem,this](){StatusChanged(Downloading,listItem);});
+
+        //Action Start
+        QObject::connect(
+            Open,
+            &QAction::triggered,
+            this,
+            [listItem,this](){
+                return OpenFile(listItem,0);
+            }
+        );
+
+        QObject::connect(Open_From_Folder,&QAction::triggered,this,[listItem,this](){return OpenFileFromFolder(listItem,0);});
+
+
+        QObject::connect(Remove,&QAction::triggered,this,[listItem,this](){
+            qDebug("remove trigged");
+            QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
+
+            //*prompt 删除本地文件 确认
+            delete listItem;
+
+        });
     }
 
-
-    else{
-        Pause->setEnabled(false);
-    }
-
-    TaskList_popmenu->move(ui->treeWidgetTaskQueue->cursor().pos());    //菜单显示在鼠标点击的位置
-    TaskList_popmenu->show();
-
-    
-    QObject::connect(Pause,&QAction::triggered,this,[listItem,this](){StatusChanged(Paused,listItem);});
-    QObject::connect(Resume,&QAction::triggered,this,[listItem,this](){StatusChanged(Downloading,listItem);});
-
-    QObject::connect(Open,&QAction::triggered,this,[this](){ShowFromExplorer();});
-
-    return true;
-
+    return false;
 }
 
 
@@ -104,45 +146,7 @@ void PropertiesWidget::clearStatusList(){
     ui->treeWidgetTaskQueue->clear();
 }
 
-void PropertiesWidget::AddTaskQueue(const char* Status,QTreeWidgetItem *listItem){
-
-    qDebug()<<"AddTaskQueue trigged";
-
-    QString QStatus = Status;
-
-    QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
-
-    // Status,Filename,Progress,Size,Speed,DateTime
-
-
-
-    QList<QString> newItemInformation{QStatus,listItem->text(1),"null",listItem->text(2),"null","DateTime"};
-
-    treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
-
-    ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
-
-    treeWidgetTaskQueue->setItemDelegateForColumn(2, progressBar);
-
-    qDebug("topLevelItemCount:%d",treeWidgetTaskQueue->topLevelItemCount());
-}
-
-void PropertiesWidget::statusEventLoop(const QString& itemName,const QString& itemSize,float& Progress){
-    QEventLoop statusLoop;
-
-    qRegisterMetaType<float&>("float&");
-    QMetaObject::invokeMethod(this, "testSlot", Q_ARG(QString, itemName), Q_ARG(QString, itemSize), Q_ARG(float&, Progress));
-    qApp->processEvents(QEventLoop::AllEvents,5);
-
-
-    QTimer::singleShot(20, &statusLoop, SLOT(quit())); //20ms后执行退出
-    statusLoop.exec();
-
-}
-
-void PropertiesWidget::testSlot(const QString& itemName,const QString& itemSize,float& Progress){
-
-//    QEventLoop statusLoop;
+void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& itemSize,QString& itemLink,float& Progress){
 
     qDebug() << "from thread slot:" << QThread::currentThreadId();
 
@@ -154,11 +158,16 @@ void PropertiesWidget::testSlot(const QString& itemName,const QString& itemSize,
     if(!matchList.size()){
 
         // Status,Filename,Progress,Size,Speed,DateTime
-        QList<QString> newItemInformation{"Downloading",itemName,"null",itemSize,"null","DateTime"};
+        QList<QString> newItemInformation{"Downloading",itemName,"null",itemSize,"null","DateTime",QString::fromStdString(DownloadPath)};
         ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
 
-        treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
-        treeWidgetTaskQueue->setItemDelegateForColumn(2, progressBar);
+
+        QMetaObject::invokeMethod(this,[&](){
+            treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+            treeWidgetTaskQueue->setItemDelegateForColumn(2, progressBar);
+        });
+
+
 
         qDebug("topLevelItemCount:%d",treeWidgetTaskQueue->topLevelItemCount());
     }
@@ -167,22 +176,18 @@ void PropertiesWidget::testSlot(const QString& itemName,const QString& itemSize,
         QTreeWidgetItem *currentItem = matchList.at(0);
 
 
+        QMetaObject::invokeMethod(this,[&](){
             currentItem->setData(2, Qt::UserRole, Progress); //数据更新
-
-            qApp->processEvents(QEventLoop::AllEvents,8);
 
             if(static_cast<int>(round(Progress))==100){
                 qDebug("%s Download Complete!",itemName.toStdString().c_str());
                 StatusChanged(3,currentItem);
             }
 
-
+        });
 
         qDebug("itemName:%s,Progress:%f",itemName.toStdString().c_str(),Progress);
     }
-
-
-
 
 }
 
@@ -211,7 +216,10 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
         }
 
         case Finished:{
-            listItem->setText(0,"Finished"); break;
+            listItem->setText(0,"Finished");
+            listItem->setText(5,QTime::currentTime().toString());
+
+            break;
         }
 
     }
@@ -220,6 +228,77 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 
 //Slot:
 
-void PropertiesWidget::ShowFromExplorer(){
-    qDebug("open it from Download Pos.");
+void PropertiesWidget::OpenFile(QTreeWidgetItem* listItem,int colmun){
+    QDesktopServices::openUrl(QUrl("file:"+listItem->text(6)+"\\"+listItem->text(1),QUrl::TolerantMode));
+}
+
+
+void PropertiesWidget::OpenFileFromFolder(QTreeWidgetItem* listItem,int colmun){
+    qDebug("storagePath:%s",listItem->text(6).toStdString().c_str());
+    QDesktopServices::openUrl(QUrl("file:"+listItem->text(6),QUrl::TolerantMode));
+}
+
+void PropertiesWidget::ActionPressed(){
+
+    //QPushButton *button = (QPushButton *)sender(); //指针函数sender?
+
+    //等同于以下声明
+    QPushButton *button = static_cast<QPushButton*>(sender());
+
+    //似乎会自动检测信号触发的 sender 而前面的 (QPushButton*)则是类
+    //也就是说 理论上。。 可以 auto *[Name] = (anyType QObject*)sender
+
+    selectedTreeWidgetItems = ui->treeWidgetTaskQueue->selectedItems();
+    qDebug("selectedLength:%zu",selectedTreeWidgetItems.length());
+
+    if(button->text() == "Continue"){
+        for(auto& TreeItem:selectedTreeWidgetItems){
+            StatusChanged(0,TreeItem);
+        }
+        return;
+    }
+
+    else if(button->text() == "Pause"){
+        for(auto& TreeItem:selectedTreeWidgetItems){
+            StatusChanged(2,TreeItem);
+        }
+        return;
+    }
+
+    else{
+        for(auto& TreeItem:selectedTreeWidgetItems){
+            if(TreeItem!=nullptr) delete TreeItem;
+        }
+        return;
+    }
+
+}
+
+
+void PropertiesWidget::keyPressEvent(QKeyEvent *event){
+
+    selectedTreeWidgetItems = ui->treeWidgetTaskQueue->selectedItems();
+
+    qDebug("selectedLength:%zu",selectedTreeWidgetItems.length());
+
+        switch(event->key()){
+            case Qt::Key_Return: {
+                for(auto& TreeItem:selectedTreeWidgetItems){
+                    qDebug()<<"listItem Address:"<<TreeItem;
+                    if(TreeItem->text(0)!="Finished") continue; //未在完成状态时 不要打开它
+                    emit ui->treeWidgetTaskQueue->itemDoubleClicked(TreeItem, 0);
+                }
+                break;
+            }
+
+            case Qt::Key_Delete: {
+                for(auto& TreeItem:selectedTreeWidgetItems){
+                    qDebug()<<"listItem Address:"<<TreeItem;
+                    delete TreeItem;
+                }
+                break;
+            }
+        }
+
+
 }

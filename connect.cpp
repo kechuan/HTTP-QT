@@ -1,5 +1,5 @@
 #include "connect.h"
-#include "qtimer.h"
+//#include "qtimer.h"
 #include <QDebug>
 #include <fstream>
 #include <filesystem> //C++ 17 to solve fstream wchar problem.
@@ -8,6 +8,8 @@
 #include <chrono> //c++ 11计时库
 
 #include <regex>
+
+//#include "updateUiThread.h"
 
 #define readyStatus std::future_status::ready
 #define timeoutStatus std::future_status::timeout
@@ -22,8 +24,9 @@ using namespace httplib;
 using string = std::string;
 
 extern std::map<std::string,int> TaskMap;
+extern std::string DownloadPath;
 
-void WriteToFile(std::string& FileName,std::string& Data); //预声明
+void WriteToFile(std::string DownloadPath,std::string& FileName,std::string& Data); //预声明
 
 void Connect::Abort(){
     qDebug()<<"connect Abort.";
@@ -54,16 +57,15 @@ std::string Connect::cliFileSurfing(QString& IP,int& Port,QString& Postition){
     return body;
 }
 
-void Connect::cliFileDownload(QString& IP,int& Port,QString& Postition,QString& itemName,QString& itemSize){
+void Connect::cliFileDownload(QString& IP,int& Port,QString& itemLink,QString& itemName,QString& itemSize){
 
     Client cli(IP.toStdString(),Port);
     std::string fileName = itemName.toStdString();
 
-    qDebug("download trigger Link:%s",Postition.toStdString().c_str());
+    qDebug("download trigger Link:%s",itemLink.toStdString().c_str());
 
     std::string path = "./downloads/";
     path.append(fileName);
-    qDebug("FileName:%s",path.c_str());
 
     std::string body;
     std::string total_size = itemSize.toStdString();
@@ -106,30 +108,32 @@ void Connect::cliFileDownload(QString& IP,int& Port,QString& Postition,QString& 
     //???连我也看不懂为什么invokeMethod不会自带注册float& 但是神奇的是
     //如果直接float糊脸 md 槽函数就会认为是float 因此与 float& 不相同而不响应
 
-    // QTimer::singleShot(0, this, SIGNAL(testSignal(itemName,FProgress)));
-    //QMetaObject::invokeMethod(this, "testSignal", Q_ARG(QString, itemName), Q_ARG(QString, itemSize), Q_ARG(float&, FProgress));
-    emit testSignal(itemName,itemSize,FProgress);
+    // QTimer::singleShot(0, this, SIGNAL(ProgressUpdate(itemName,FProgress)));
+    //QMetaObject::invokeMethod(this, "ProgressUpdate", Q_ARG(QString, itemName), Q_ARG(QString, itemSize), Q_ARG(float&, FProgress));
+    emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
 
-    auto res = cli.Get(Postition.toStdString(),
+    auto res = cli.Get(itemLink.toStdString(),
       [&](const char *data, size_t data_length) {
         body.append(std::move(data), data_length);
         
         FProgress = (body.size()*100/fliterSize);
-        if(intervalflag == 1000){
+        qDebug("Line 120:Progress:%f",FProgress);
+
+        if(intervalflag == 2500){
             intervalflag = 0;
-            emit testSignal(itemName,itemSize,FProgress);
+            emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
         }
 
         ++intervalflag;
        return true;
     });
 
-    emit testSignal(itemName,itemSize,FProgress);
+    emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
 
     qDebug() << "Connect.cpp Line 124: thread cliFileDownload" << QThread::currentThreadId();
 
     qDebug("Connect.cpp Line 84:FileSize:%zu",body.size());
-    WriteToFile(fileName,body);
+    WriteToFile(DownloadPath,fileName,body);
 
 }
 
@@ -179,8 +183,7 @@ bool Connect::cliPing(QString& IP,int& Port){
 }
 
 
-void WriteToFile(std::string& FileName,std::string& Data){ //overload
-    std::string path = "./downloads/";
+void WriteToFile(std::string path,std::string& FileName,std::string& Data){ //overload
     path.append(FileName.c_str());
     qDebug("path:%s",path.c_str());
 

@@ -19,11 +19,13 @@ public:
 
     void keyPressEvent(QKeyEvent *event);
 
+    void deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetItems);
+
     Ui::PropertiesWidget *ui;
 
 private:
-    
     Ui::MainWindow *m_ui;
+
 
 public slots:
    void clearStatusList();

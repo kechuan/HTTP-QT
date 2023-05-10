@@ -18,7 +18,6 @@
 #include <future>
 #include <chrono>
 
-
 #include <QtConcurrent/QtConcurrent>
 
 #define readyStatus std::future_status::ready
@@ -42,6 +41,7 @@ std::string DownloadPath = "./downloads/";
 bool m_status = false;
 
 Connect Client1;
+QList<QTreeWidgetItem*> selectedList;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -73,6 +73,18 @@ MainWindow::MainWindow(QWidget *parent)
 //    Filelist->setContextMenuPolicy(Qt::CustomContextMenu);  //默认值 Default->0
     Filelist->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
+    QLineEdit *DownloadPathInput = ui->DownloadPath;
+    QPushButton *Button_DownloadSurfingPath = ui->DownloadSurfingPath;
+
+    std::string FullPath = std::filesystem::current_path().string();
+    FullPath.insert(0,"Default Path:");
+    FullPath.append("\\downloads");
+
+    DownloadPathInput->setPlaceholderText(QString::fromStdString(std::move(FullPath)));
+
+    DownloadPathInput->setVisible(false);
+    Button_DownloadSurfingPath->setVisible(false);
+
 
     QWidget *statusShow = ui->statusShow;
     statusShow->setVisible(false);
@@ -85,21 +97,84 @@ MainWindow::MainWindow(QWidget *parent)
    //warning: connect-not-normalized 对于信号与槽 似乎并不需要特别的分配&引用符号 用上普通的方式反而能避免更多的内存开销 真是奇怪
    //规范提示传入的信号类型 最好全部都是简简单单的写个type上去 不需要多余的 类型修饰符 或者是*/&之类 否则会导致可能的内存泄露(以及难看的warning
 
-    QObject::connect(ui->About,SIGNAL(triggered()),this,SLOT(Tab_pressed()));
-    QObject::connect(ui->IP_controlPanel,SIGNAL(triggered()),this,SLOT(Tab_pressed()));
-    QObject::connect(Filelist,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(itemAccess(QTreeWidgetItem*,int)));
+    QObject::connect(ui->About,&QAction::triggered,this,&MainWindow::Tab_pressed);
+    QObject::connect(ui->IP_controlPanel,&QAction::triggered,this,&MainWindow::Tab_pressed);
+
+    QObject::connect(ui->DownloadPathSetting,&QAction::triggered,this,[this,DownloadPathInput,Button_DownloadSurfingPath](){
+        if(DownloadPathInput->isVisible()==false){
+            DownloadPathInput->setVisible(true);
+            Button_DownloadSurfingPath->setVisible(true);
+        }
+
+        else{
+            DownloadPathInput->setVisible(false);
+            Button_DownloadSurfingPath->setVisible(false);
+        }
+
+    });
+
+    //按下Enter或者是输入框失去焦点时触发
+
+
+    QObject::connect(Button_DownloadSurfingPath,&QPushButton::clicked,this,[this,DownloadPathInput,Button_DownloadSurfingPath](){
+        qDebug("you clicked the Button_DownloadSurfingPath");
+
+        QString homePath = QDir::homePath();
+
+        QUrl DownloadPathInputSelect = QFileDialog::getExistingDirectoryUrl(
+            nullptr,
+            tr("SurfingPath for DownloadPathInput"),
+            homePath
+        );
+
+        if(!DownloadPathInputSelect.isEmpty()){
+            std::string SplitPath = DownloadPathInputSelect.toString().toStdString().erase(0,8);
+            DownloadPath = SplitPath;
+            DownloadPath.append("/");
+            DownloadPathInput->clear();
+            DownloadPathInput->insert(QString::fromStdString(DownloadPath));
+        }
+
+        else{
+            qDebug("selected no thing for DownloadPathInput");
+        }
+
+        QMessageBox ConfirmPrompt;
+
+        ConfirmPrompt.setInformativeText(DownloadPath.c_str());
+        ConfirmPrompt.setText("下载目录变更完毕");
+
+        int exec = ConfirmPrompt.exec();
+
+        DownloadPathInput->setVisible(false);
+        Button_DownloadSurfingPath->setVisible(false);
+
+    });
+
+    QObject::connect(DownloadPathInput,&QLineEdit::editingFinished,this,[this,DownloadPathInput](){
+        QMessageBox ConfirmPrompt;
+
+        DownloadPath = DownloadPathInput->text().toStdString();
+
+        ConfirmPrompt.setInformativeText(DownloadPath.c_str());
+        ConfirmPrompt.setText("下载目录变更完毕");
+
+        int exec = ConfirmPrompt.exec();
+
+    });
+
+    QObject::connect(Filelist,&QTreeWidget::itemDoubleClicked,this,&MainWindow::itemAccess); //item按下判断触发
 
    //需求将QTreeWidget界面下对每个子item添加右键菜单 课是QTreeWidget自带的方法并没有这种设置 怎么办?
    //思路:先检测对treewidget的点击 然后检测被点击的item是左键还是右键 右键时执行qMenu
-    QObject::connect(Filelist,SIGNAL(itemPressed(QTreeWidgetItem*,int)),this,SLOT(FileList_Menu(QTreeWidgetItem*,int))); //item按下判断触发
-    
+
+    QObject::connect(Filelist,&QTreeWidget::itemPressed,this,&MainWindow::FileList_Menu); //item按下判断触发
     QObject::connect(TaskQueue,&QPushButton::clicked,this,[&](){showStatus(m_status);}); //item按下判断触发
 
-    QObject::connect(ui->tabWidget_contentShow,SIGNAL(tabBarClicked(int)),this,SLOT(LostSelection(int)));
+    QObject::connect(ui->tabWidget_contentShow,&QTabWidget::tabBarClicked,this,&MainWindow::LostSelection);
 
     QObject::connect(this,&MainWindow::connetPressed,DockWidget,&PropertiesWidget::clearStatusList);
     QObject::connect(IP_controlPanelWindow,&IP_controlPanel::connetPressed,DockWidget,&PropertiesWidget::clearStatusList);
-
 
     //QObject是一个抽象类 似乎因为如此 connect需要用引用符号获得它的地址来进行操作
     //我真的特别谢谢QT还保留了地址的重载写法。。
@@ -179,11 +254,12 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
         this,
         [this](){   //捕获this 以引入函数执行主体 this->mainwindow
                 ui->Filelist->clear();
-                qDebug("Surfingpath%s",SurfingPath.toStdString().c_str());
+                qDebug("Surfingpath: %s",SurfingPath.toStdString().c_str());
                 QList<QString> newItemInformation{"-","..","—",ParentPath};
                 ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
-                std::string Information = Client1.cliFileSurfing(FullIP,Port,SurfingPath);
+//                std::string Information = Client1.cliFileSurfing(FullIP,Port,SurfingPath);
+                std::string Information = Client1.cliFileSurfing(SurfingPath);
                 HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
 
                 for(int index = 0;index<=SizeVector.size()-1;++index){
@@ -194,9 +270,26 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
             }
     );
 
-    QObject::connect(Delete,SIGNAL(triggered(bool)),this,SLOT(Delete()));
+    QObject::connect(
+        Delete,
+        &QAction::triggered,
+        this,
+        [this,listItem](){
+            MainWindow::Delete();
+        }
+    );
+
+    QObject::connect(
+        Rename,
+        &QAction::triggered,
+        this,
+        [this,listItem](){
+            MainWindow::Rename(listItem);
+        }
+    );
+
     QObject::connect(NewDir,SIGNAL(triggered(bool)),this,SLOT(NewDir()));
-    QObject::connect(Rename,SIGNAL(triggered(bool)),this,SLOT(Rename()));
+
 
     QObject::connect(
         Upload,
@@ -207,7 +300,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
             //说起来多集合的QString 得用官方提供的QStringList来装载
             //然而内部方法与vector却没什么不同
 
-            QStringList UploadFiles =  QFileDialog::getOpenFileNames(
+            QStringList UploadFiles = QFileDialog::getOpenFileNames(
                 nullptr,
                 tr("choose Files to upload"),
                 "D:/All Local Downloads",
@@ -220,8 +313,8 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
             if(UploadFiles.length()!=0){
 
                 qDebug("UploadFiles length:%zu",UploadFiles.length());
-                for(auto &i:UploadFiles){
-                    QFileInfo info(i);
+                for(auto &File:UploadFiles){
+                    QFileInfo info(File);
 
                     QString Filename = std::move(info.fileName());
                     QString content_type = std::move(info.suffix());
@@ -235,14 +328,14 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
                     std::string filecontent;
 
                     std::ifstream TargetFile;
-                    std::string path = i.toStdString();
+                    std::string readPath = File.toStdString();
 
+                    TargetFile.open(std::filesystem::u8path(readPath),std::ios_base::binary);
                     qDebug("open in binary way");
-                    TargetFile.open(path,std::ios_base::binary);
 
 
                     if(!TargetFile.is_open()){
-                        qDebug("failed");
+                        qDebug("open failed");
                     }
 
                     else{
@@ -262,7 +355,8 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
 
             QString TargetPosition = R"(D:\cpp\app\HTTP-UI\build-HTTP-QT-Desktop_Qt_6_2_4_MinGW_64_bit-Debug\downloads)";
 
-            Client1.cliFileUpload(FullIP,Port,TargetPosition,items);
+//            Client1.cliFileUpload(FullIP,Port,TargetPosition,items);
+            Client1.cliFileUpload(TargetPosition,items);
 
 
         }
@@ -279,11 +373,10 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
         //在弹出之前 先过一个纯File判断
 
         QTreeWidget *Filelist = ui->Filelist;
-        QList selectedList = Filelist->selectedItems();
+        selectedList = Filelist->selectedItems();
 
         if(selectedList.size()>1){
             for(auto &i:selectedList){
-
                 QString selectedListsName = i->text(1);
                 QString selectedListsSize = i->text(2);
 
@@ -354,7 +447,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
     if(selectedListsSize!="—"){
         QTreeWidget *Filelist = ui->Filelist;
-        QList selectedList = Filelist->selectedItems();
+        selectedList = Filelist->selectedItems();
 
         if(selectedList.size()>1){
             for(auto &i:selectedList){
@@ -365,7 +458,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
                 qDebug("you selected the %s,which size is:%s",selectedName.toStdString().c_str(),selectedSize.toStdString().c_str());
 
                 std::shared_future<void> Record = std::async([&](){
-                    return Client1.cliFileDownload(FullIP,Port,selectedLink,selectedName,selectedSize);
+                    return Client1.cliFileDownload(selectedLink,selectedName,selectedSize);
                 });
 
             }
@@ -377,7 +470,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
             //async 类内函数调用方式
             std::shared_future<void> Record = std::async([&](){
-                return Client1.cliFileDownload(FullIP,Port,selectedListsLink,selectedListsName,selectedListsSize);
+                return Client1.cliFileDownload(selectedListsLink,selectedListsName,selectedListsSize);
             });
 
 
@@ -387,8 +480,8 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
     }
 
    else{
-       qDebug("double clicked the itemName %s, it linked is:%s",selectedListsName.toStdString().c_str(),selectedListsLink.toStdString().c_str()); //colnmun指代 子信息
-       std::string Information = Client1.cliFileSurfing(FullIP,Port,selectedListsLink);
+       qDebug("double clicked the itemName %s, it linked to:%s",selectedListsName.toStdString().c_str(),selectedListsLink.toStdString().c_str()); //colnmun指代 子信息
+       std::string Information = Client1.cliFileSurfing(selectedListsLink);
 
        HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
 
@@ -416,8 +509,10 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         if(selectedListsName==".."&&selectedListsLink==rootPath){
            qDebug("redirect to the disk select.");
 
-           Information = Client1.cliFileSurfing(FullIP,Port,rootPath);
+           Information = Client1.cliFileSurfing(rootPath);
            HTMLExtract(Information,LinkVector,NameVector);
+
+
 
            for(int index = 0;index<=NameVector.size()-1;++index){
                QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
@@ -428,11 +523,20 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         }
 
         else{
-           for(int index = 0;index<=NameVector.size()-1;++index){
-               QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
-               QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
-               ui->Filelist->addTopLevelItem(newItem);
+
+            if(!NameVector.size()){
+                qDebug("empty File Open");
             }
+
+            else{
+                for(int index = 0;index<=NameVector.size()-1;++index){
+                    QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
+                    QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
+                    ui->Filelist->addTopLevelItem(newItem);
+                }
+            }
+
+
        }
    }
 
@@ -458,13 +562,25 @@ void MainWindow::Tab_pressed(){
 
 }
 
-void MainWindow::Rename(){
-    qDebug("Rename item.");
+void MainWindow::Rename(QTreeWidgetItem *listItem){
+    qDebug("Rename item:%s",listItem->text(1).toStdString().c_str());
 }
 
 void MainWindow::Delete(){
-    qDebug("Delete item.");
+    QList<QString> LinkList;
+
+    selectedList = ui->Filelist->selectedItems();
+
+    for(auto& List:selectedList){
+        qDebug("Ask for server to Delete item:%s",List->text(1).toStdString().c_str());
+        LinkList.emplaceBack(List->text(3));
+        delete List;
+    }
+
+    Client1.cliFileDelete(LinkList);
+
 }
+
 
 void MainWindow::NewDir(){
     qDebug("create newDir.");
@@ -505,24 +621,19 @@ void MainWindow::clearStatusList(){
 
 //keyPressEvent 事件 不同于 信号与槽的高度封装 事件通常需要手动去配置 但同时自由度也比事件与槽高的多
 void MainWindow::keyPressEvent(QKeyEvent *event){
+    QList<QTreeWidgetItem*> selectedTreeWidgetItems = ui->Filelist->selectedItems();
+
     switch(event->key()){
         case Qt::Key_Return: {
-            QList<QTreeWidgetItem*> selectedTreeWidgetItems = ui->Filelist->selectedItems();
-
-            if(selectedTreeWidgetItems.length()>1){
-                for(auto& TreeItem:selectedTreeWidgetItems){
-                    emit ui->Filelist->itemDoubleClicked(TreeItem, 0); //回车->选择列表的双击
-                }
+            for(auto& TreeItem:selectedTreeWidgetItems){
+                emit ui->Filelist->itemDoubleClicked(TreeItem, 0); //回车->选择列表的双击
             }
 
-            else{
-                QTreeWidgetItem *listItem = selectedTreeWidgetItems.at(0);
-                if (listItem != nullptr){
-                    emit ui->Filelist->itemDoubleClicked(listItem, 0); //回车->选择列表的双击
-                }
-            }
+            break;
+        }
 
-            
+        case Qt::Key_Delete:{
+                Delete();
             break;
         }
 

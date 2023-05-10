@@ -63,9 +63,6 @@ inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkV
         );
     }
 
-//    for(auto &Link:LinkVector) qDebug("Link:%s",Link.c_str()); //不要直接使用 for(iter:<容器>) 因为会导致一次拷贝构造
-//    for(auto &Disk:NameVector) qDebug("Disk:%s",Disk.c_str());
-
 
 }
 

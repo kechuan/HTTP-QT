@@ -26,15 +26,46 @@ using string = std::string;
 extern std::map<std::string,int> TaskMap;
 extern std::string DownloadPath;
 
+extern QString FullIP;
+extern int Port;
+
 void WriteToFile(std::string DownloadPath,std::string& FileName,std::string& Data); //预声明
 
 void Connect::Abort(){
     qDebug()<<"connect Abort.";
 }
 
-std::string Connect::cliFileSurfing(QString& IP,int& Port){
+bool Connect::cliPing(){
+    Client cli(FullIP.toStdString(),Port);
+
+    //timeout handler prevent crash
+    cli.set_connection_timeout(0,3000); //3s 0,3000 0前置则判断为ms 0后置则判断为s 这设计思路挺厉害的
+    cli.set_read_timeout(3,0);
+    cli.set_write_timeout(3,0);
+
+    qDebug("Target FullIP %s created Port:%d.",FullIP.toStdString().c_str(),Port);
+    if(auto res = cli.Post("/ping")){ //用if包裹其中 让其变为自动的0/1判断返回 因为res超时响应就会被赋予"0" 
+        if( res->status == 200){
+            qDebug()<<"succ";
+            //httplib的res返回就两种 status与body
+            qDebug("%s",res->body.c_str());
+            return true;
+        }
+
+    }
+
+    else{
+        auto err = res.error();
+        qDebug("err code:%d, Information:%s",err,to_string(err).c_str());
+    }
+
+    return false;
+
+}
+
+std::string Connect::cliFileSurfing(){
     std::string body;
-    Client cli(IP.toStdString(),Port);
+    Client cli(FullIP.toStdString(),Port);
 
     auto res = cli.Get("/file",
         [&](const char *data, size_t data_length) {
@@ -46,9 +77,9 @@ std::string Connect::cliFileSurfing(QString& IP,int& Port){
     
 }
 
-std::string Connect::cliFileSurfing(QString& IP,int& Port,QString& Postition){
+std::string Connect::cliFileSurfing(QString& Postition){
     std::string body;
-    Client cli(IP.toStdString(),Port);
+    Client cli(FullIP.toStdString(),Port);
     auto res = cli.Get(Postition.toStdString(),
       [&](const char *data, size_t data_length) {
         body.append(data, data_length);
@@ -57,9 +88,9 @@ std::string Connect::cliFileSurfing(QString& IP,int& Port,QString& Postition){
     return body;
 }
 
-void Connect::cliFileDownload(QString& IP,int& Port,QString& itemLink,QString& itemName,QString& itemSize){
+void Connect::cliFileDownload(QString& itemLink,QString& itemName,QString& itemSize){
 
-    Client cli(IP.toStdString(),Port);
+    Client cli(FullIP.toStdString(),Port);
     std::string fileName = itemName.toStdString();
 
     qDebug("download trigger Link:%s",itemLink.toStdString().c_str());
@@ -137,14 +168,13 @@ void Connect::cliFileDownload(QString& IP,int& Port,QString& itemLink,QString& i
 
 }
 
-void Connect::cliFileUpload(QString& IP,int& Port,QString& QTargetPosition,httplib::MultipartFormDataItems &items){
-    Client cli(IP.toStdString(),Port);
+void Connect::cliFileUpload(QString& QTargetPosition,httplib::MultipartFormDataItems &items){
+    Client cli(FullIP.toStdString(),Port);
     qDebug("the TargetPosition is:%s",QTargetPosition.toStdString().c_str());
 
     std::string TargetPosition = QTargetPosition.toStdString().c_str();
 
     if (auto ping = cli.Post("/ping")){
-
         if(ping->status==200){
             qDebug()<<"server ok";
             auto upload = cli.Post("/upload/"+TargetPosition, items);
@@ -153,35 +183,26 @@ void Connect::cliFileUpload(QString& IP,int& Port,QString& QTargetPosition,httpl
 }
 
 
+void Connect::cliFileDelete(QList<QString>& TargetPosition){
+    Client cli(FullIP.toStdString(),Port);
 
-bool Connect::cliPing(QString& IP,int& Port){
-    Client cli(IP.toStdString(),Port);
+    httplib::Params DeleteParams;
 
-    //timeout handler prevent crash
-    cli.set_connection_timeout(0,3000); //3s 0,3000 0前置则判断为ms 0后置则判断为s 这设计思路挺厉害的
-    cli.set_read_timeout(3,0);
-    cli.set_write_timeout(3,0);
+    for(auto& File:TargetPosition){
+        std::string FileStr = File.toStdString().c_str();
+        DeleteParams.emplace("Postition",FileStr);
+    }
 
-    qDebug("Target IP %s created Port:%d.",IP.toStdString().c_str(),Port);
-    if(auto res = cli.Post("/ping")){ //用if包裹其中 让其变为自动的0/1判断返回 因为res超时响应就会被赋予"0" 
-        if( res->status == 200){
-            qDebug()<<"succ";
-            //httplib的res返回就两种 status与body
-            qDebug("%s",res->body.c_str());
-            return true;
+
+
+    if (auto ping = cli.Post("/ping")){
+        if(ping->status==200){
+            qDebug()<<"server ok";
+            auto DeleteAction = cli.Post("/delete",DeleteParams);
         }
-
     }
-
-    else{
-        auto err = res.error();
-        qDebug("err code:%d, Information:%s",err,to_string(err).c_str());
-    }
-
-    return false;
 
 }
-
 
 void WriteToFile(std::string path,std::string& FileName,std::string& Data){ //overload
     path.append(FileName.c_str());

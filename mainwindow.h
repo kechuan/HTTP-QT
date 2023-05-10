@@ -51,7 +51,7 @@ private slots:
 
     //General Area
     // void Test();
-    void Rename();
+    void Rename(QTreeWidgetItem *listItem);
     void Delete();
     void NewDir();
     void Copy();
@@ -72,6 +72,8 @@ private slots:
     void showStatus(bool&);
 
     void clearStatusList();
+
+    // void SurfingDownloadPath();
 
 signals:
     void connetPressed();

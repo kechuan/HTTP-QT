@@ -13,14 +13,12 @@ enum StatusList{
     Paused,
     Finished,
     Failed,
-
 };
 
 extern Connect Client1;
 extern std::string DownloadPath;
 
 QList<QTreeWidgetItem*> selectedTreeWidgetItems;
-
 
 PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QWidget(parent),
@@ -86,22 +84,28 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
 
         TaskList_popmenu->addAction(Remove);
 
-
+        //working Status
         if(Status!="Finished"){
             Open->setEnabled(false);
+        }
+
+        else if(Status=="Downloading"){
+            Resume->setEnabled(false);
         }
 
 
         else if(Status=="Paused"){
             Pause->setEnabled(false);
-            Resume->setEnabled(true);
         }
 
+        //finished Status
         else{
-            Open->setEnabled(false);
+            Open->setEnabled(true);
             Resume->setEnabled(false);
-            Pause->setEnabled(true);
+            Pause->setEnabled(false);
         }
+
+
 
         TaskList_popmenu->move(ui->treeWidgetTaskQueue->cursor().pos());    //菜单显示在鼠标点击的位置
         TaskList_popmenu->show();
@@ -122,22 +126,63 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
 
         QObject::connect(Open_From_Folder,&QAction::triggered,this,[listItem,this](){return OpenFileFromFolder(listItem,0);});
 
-
-        QObject::connect(Remove,&QAction::triggered,this,[listItem,this](){
-            qDebug("remove trigged");
-            QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
-
-            //*prompt 删除本地文件 确认
-            delete listItem;
-
+        QObject::connect(Remove,&QAction::triggered,this,[this](){
+            deletePrompt(selectedTreeWidgetItems);
         });
     }
 
     return false;
 }
 
+//generalFunction:
 
 
+void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetItems){
+    qDebug()<<"deletePrompt";
+
+    if(!selectedTreeWidgetItems.length()) return;
+
+    //*prompt 删除本地文件 确认
+    QMessageBox DeleteConfirm;
+
+    DeleteConfirm.setText(tr("删除文件"));
+    DeleteConfirm.setInformativeText(tr("是否与文件一起删除?"));
+
+    std::string Text = "已选中0个文件";
+
+    if(selectedTreeWidgetItems.length()>1){
+        //UTF-8 汉字编码为3字节 然后再减去索引的1得出index:9
+        Text.replace(9,1,std::to_string(selectedTreeWidgetItems.length()));
+        DeleteConfirm.setInformativeText(QString::fromStdString(Text));
+    }
+
+    QPushButton *DeleteButton = DeleteConfirm.addButton("Delete",QMessageBox::AcceptRole);
+    QPushButton *DeniedButton = DeleteConfirm.addButton("ListItem Only",QMessageBox::NoRole);
+    QPushButton *DiscardButton = DeleteConfirm.addButton("Discard",QMessageBox::RejectRole);
+
+    DeleteConfirm.exec();
+
+    if(DeleteConfirm.clickedButton() == DeleteButton){
+        for(auto CurrentItem:selectedTreeWidgetItems){
+            QString FullPath = CurrentItem->text(6)+CurrentItem->text(1);
+            //correctWay delete u8
+            std::filesystem::remove(std::filesystem::u8path(FullPath.toStdString().c_str()));
+            delete CurrentItem;
+        }
+
+    }
+
+    else if(DeleteConfirm.clickedButton() == DeniedButton){
+        for(auto CurrentItem:selectedTreeWidgetItems){
+            delete CurrentItem;
+        }
+    }
+
+    else if(DeleteConfirm.clickedButton() == DiscardButton){
+        return;
+    }
+
+}
 
 //signals:
 
@@ -157,7 +202,7 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& ite
 
     if(!matchList.size()){
 
-        // Status,Filename,Progress,Size,Speed,DateTime
+        // Status,Filename,Progress,Size,Speed,DateTime,storagePath
         QList<QString> newItemInformation{"Downloading",itemName,"null",itemSize,"null","DateTime",QString::fromStdString(DownloadPath)};
         ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
 
@@ -266,9 +311,10 @@ void PropertiesWidget::ActionPressed(){
     }
 
     else{
-        for(auto& TreeItem:selectedTreeWidgetItems){
-            if(TreeItem!=nullptr) delete TreeItem;
-        }
+        deletePrompt(selectedTreeWidgetItems);
+//        for(auto& TreeItem:selectedTreeWidgetItems){
+//            if(TreeItem!=nullptr) delete TreeItem;
+//        }
         return;
     }
 
@@ -292,10 +338,7 @@ void PropertiesWidget::keyPressEvent(QKeyEvent *event){
             }
 
             case Qt::Key_Delete: {
-                for(auto& TreeItem:selectedTreeWidgetItems){
-                    qDebug()<<"listItem Address:"<<TreeItem;
-                    delete TreeItem;
-                }
+                deletePrompt(selectedTreeWidgetItems);
                 break;
             }
         }

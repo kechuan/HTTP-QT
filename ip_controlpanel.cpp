@@ -62,8 +62,8 @@ void IP_controlPanel::action_pressed(){
 
             log_view->append(R"(<span style=" color:#ffffff;">)"+buttonName+FullIP+":"+ui->lineEdit_Port->text()+R"(</span>)");
 
-            if(Client1.cliPing(FullIP,Port)){
-                std::string Information = Client1.cliFileSurfing(FullIP,Port);
+            if(Client1.cliPing()){
+                std::string Information = Client1.cliFileSurfing();
                 HTMLExtract(Information,LinkVector,NameVector);
 
                 m_ui->Filelist->clear();
@@ -84,7 +84,10 @@ void IP_controlPanel::action_pressed(){
 
             else{
                 //链接超时处理
-                qDebug()<<"ping failed.";
+                QMessageBox TimeoutPrompt;
+                TimeoutPrompt.setText(tr("链接超时 请检查是否已打开服务器"));
+                TimeoutPrompt.exec();
+
             }
         }
 

@@ -12,14 +12,16 @@
 class Connect:public QObject{
     Q_OBJECT
 public:
-    bool cliPing(QString& IP,int& Port);
+    bool cliPing();
 
-    std::string cliFileSurfing(QString& IP,int& Port);
-    std::string cliFileSurfing(QString& IP,int& Port,QString& Postition);
+    std::string cliFileSurfing();
+    std::string cliFileSurfing(QString& Postition);
 
     
-    void cliFileDownload(QString& IP,int& Port,QString& itemLink,QString& itemName,QString& itemSize);
-    void cliFileUpload(QString& IP,int& Port,QString& TargetPosition,httplib::MultipartFormDataItems &items);
+    void cliFileDownload(QString& itemLink,QString& itemName,QString& itemSize);
+    void cliFileUpload(QString& TargetPosition,httplib::MultipartFormDataItems &items);
+
+    void cliFileDelete(QList<QString>& TargetPosition);
 
     std::string ReadTheFile(QString &Qpath,std::string &Information);
 

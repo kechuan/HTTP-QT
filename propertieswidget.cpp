@@ -145,15 +145,27 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetIt
     //*prompt 删除本地文件 确认
     QMessageBox DeleteConfirm;
 
-    DeleteConfirm.setText(tr("删除文件"));
-    DeleteConfirm.setInformativeText(tr("是否与文件一起删除?"));
+    //窗体基础样式设置
+    DeleteConfirm.setStyleSheet(
+        R"(
+            QLabel {
+                min-width:100px;
+                min-height:40px;
+                font-size:12px;
+            }
+        )"
+    );
+
+    //tr -> translate
+    DeleteConfirm.setWindowTitle(tr("删除文件"));
+    DeleteConfirm.setText(tr("是否与文件一起删除"));
 
     std::string Text = "已选中0个文件";
 
     if(selectedTreeWidgetItems.length()>1){
         //UTF-8 汉字编码为3字节 然后再减去索引的1得出index:9
         Text.replace(9,1,std::to_string(selectedTreeWidgetItems.length()));
-        DeleteConfirm.setInformativeText(QString::fromStdString(Text));
+        DeleteConfirm.setText(QString::fromStdString(Text));
     }
 
     QPushButton *DeleteButton = DeleteConfirm.addButton("Delete",QMessageBox::AcceptRole);
@@ -207,10 +219,10 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& ite
         ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
 
 
-        QMetaObject::invokeMethod(this,[&](){
+        // QMetaObject::invokeMethod(this,[&](){
             treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
             treeWidgetTaskQueue->setItemDelegateForColumn(2, progressBar);
-        });
+        // });
 
 
 
@@ -274,13 +286,16 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 //Slot:
 
 void PropertiesWidget::OpenFile(QTreeWidgetItem* listItem,int colmun){
-    QDesktopServices::openUrl(QUrl("file:"+listItem->text(6)+"\\"+listItem->text(1),QUrl::TolerantMode));
+//    QDesktopServices::openUrl(QUrl("file:"+listItem->text(6)+"\\"+listItem->text(1),QUrl::TolerantMode));
+
+    QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(6)+"\\"+listItem->text(1))));
 }
 
 
 void PropertiesWidget::OpenFileFromFolder(QTreeWidgetItem* listItem,int colmun){
     qDebug("storagePath:%s",listItem->text(6).toStdString().c_str());
-    QDesktopServices::openUrl(QUrl("file:"+listItem->text(6),QUrl::TolerantMode));
+//    QDesktopServices::openUrl(QUrl("file:"+listItem->text(6),QUrl::TolerantMode));
+    QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(6))));
 }
 
 void PropertiesWidget::ActionPressed(){

@@ -128,6 +128,7 @@ MainWindow::MainWindow(QWidget *parent)
         );
 
         if(!DownloadPathInputSelect.isEmpty()){
+            //DownloadPathInputSelect 选择出来的路径是 file:/// 因此需要手动擦除一下
             std::string SplitPath = DownloadPathInputSelect.toString().toStdString().erase(0,8);
             DownloadPath = SplitPath;
             DownloadPath.append("/");
@@ -449,6 +450,9 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         QTreeWidget *Filelist = ui->Filelist;
         selectedList = Filelist->selectedItems();
 
+        QEventLoop DownloadLoop;
+        QFutureWatcher<void> DownloadWatcher;
+
         if(selectedList.size()>1){
             for(auto &i:selectedList){
                 QString selectedName = i->text(1);
@@ -457,22 +461,19 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
                 qDebug("you selected the %s,which size is:%s",selectedName.toStdString().c_str(),selectedSize.toStdString().c_str());
 
-                std::shared_future<void> Record = std::async([&](){
-                    return Client1.cliFileDownload(selectedLink,selectedName,selectedSize);
-                });
+                DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,&Client1,std::ref(selectedLink),std::ref(selectedName),std::ref(selectedSize)));
+                QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
+                DownloadLoop.exec();
 
             }
         }
 
         else{
-
             qDebug("you selected the %s,which size is:%s",selectedListsName.toStdString().c_str(),selectedListsSize.toStdString().c_str());
 
-            //async 类内函数调用方式
-            std::shared_future<void> Record = std::async([&](){
-                return Client1.cliFileDownload(selectedListsLink,selectedListsName,selectedListsSize);
-            });
-
+            DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,&Client1,std::ref(selectedListsLink),std::ref(selectedListsName),std::ref(selectedListsSize)));
+            QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
+            DownloadLoop.exec();
 
         }
 

@@ -7,8 +7,6 @@
 #include <QObject>
 #include "./dependences/extern_lib/httplib.h"
 
-#include <QThread>
-
 class Connect:public QObject{
     Q_OBJECT
 public:

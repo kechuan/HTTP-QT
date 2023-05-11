@@ -8,6 +8,7 @@
 #include <chrono> //c++ 11计时库
 
 #include <regex>
+#include <QThread>
 
 //#include "updateUiThread.h"
 
@@ -148,8 +149,7 @@ void Connect::cliFileDownload(QString& itemLink,QString& itemName,QString& itemS
         body.append(std::move(data), data_length);
         
         FProgress = (body.size()*100/fliterSize);
-        qDebug("Line 120:Progress:%f",FProgress);
-
+        
         if(intervalflag == 2500){
             intervalflag = 0;
             emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);

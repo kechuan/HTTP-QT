@@ -40,15 +40,6 @@ bool m_status = false;
 Connect Client1;
 QList<QTreeWidgetItem*> selectedList;
 
-
-//void mapItem(QTreeWidgetItem *selectedItem){
-//    QString selectedName = selectedItem->text(1);
-//    QString selectedSize = selectedItem->text(2);
-//    QString selectedLink = selectedItem->text(3);
-//    Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
-//}
-
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -479,8 +470,6 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         }
 
         else{
-
-
             qDebug("you selected the %s,which size is:%s",selectedListsName.toStdString().c_str(),selectedListsSize.toStdString().c_str());
             DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,&Client1,std::ref(selectedListsName),std::ref(selectedListsSize),std::ref(selectedListsLink)));
             QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);

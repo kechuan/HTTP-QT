@@ -89,15 +89,12 @@ std::string Connect::cliFileSurfing(QString& Postition){
     return body;
 }
 
-void Connect::cliFileDownload(QString& itemLink,QString& itemName,QString& itemSize){
+void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemLink){
 
     Client cli(FullIP.toStdString(),Port);
     std::string fileName = itemName.toStdString();
 
     qDebug("download trigger Link:%s",itemLink.toStdString().c_str());
-
-    std::string path = "./downloads/";
-    path.append(fileName);
 
     std::string body;
     std::string total_size = itemSize.toStdString();

@@ -11,6 +11,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets LinguistTools)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
+find_package(Qt6 REQUIRED COMPONENTS Concurrent)
+
 link_directories(D:/cpp/dependences/mingw-lib/)
 
 
@@ -62,6 +64,7 @@ endif()
 
 
 target_link_libraries(HTTP-QT PRIVATE Qt${QT_VERSION_MAJOR}::Widgets libws2_32.a)
+target_link_libraries(HTTP-QT PRIVATE Qt6::Concurrent)
 
 set_target_properties(HTTP-QT PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com

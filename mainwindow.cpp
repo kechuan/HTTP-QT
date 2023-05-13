@@ -9,14 +9,11 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <string>
-#include <fstream>
 #include <QKeyEvent>
-#include <QSplitter>
 
 #include <vector>
 
 #include <future>
-#include <chrono>
 
 #include <QtConcurrent/QtConcurrent>
 
@@ -42,6 +39,15 @@ bool m_status = false;
 
 Connect Client1;
 QList<QTreeWidgetItem*> selectedList;
+
+
+//void mapItem(QTreeWidgetItem *selectedItem){
+//    QString selectedName = selectedItem->text(1);
+//    QString selectedSize = selectedItem->text(2);
+//    QString selectedLink = selectedItem->text(3);
+//    Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
+//}
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -437,6 +443,8 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
 
 }
 
+
+
 void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
 //这里的column代表这一行里点击的位置判定(Icon->0/FileName->1/Size->2...) 不过我并没有对column作出什么更改需求
@@ -453,25 +461,88 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         QEventLoop DownloadLoop;
         QFutureWatcher<void> DownloadWatcher;
 
+
         if(selectedList.size()>1){
-            for(auto &i:selectedList){
-                QString selectedName = i->text(1);
-                QString selectedSize = i->text(2);
-                QString selectedLink = i->text(3);
+//            for(auto &item:selectedList){
+//                QString selectedName = item->text(1);
+//                QString selectedSize = item->text(2);
+//                QString selectedLink = item->text(3);
 
-                qDebug("you selected the %s,which size is:%s",selectedName.toStdString().c_str(),selectedSize.toStdString().c_str());
+//                qDebug("you selected the %s,which size is:%s",selectedName.toStdString().c_str(),selectedSize.toStdString().c_str());
 
-                DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,&Client1,std::ref(selectedLink),std::ref(selectedName),std::ref(selectedSize)));
-                QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
-                DownloadLoop.exec();
 
-            }
+
+
+//                DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,&Client1,std::ref(selectedLink),std::ref(selectedName),std::ref(selectedSize)));
+//                QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
+//                DownloadLoop.exec();
+
+//            }
+
+
+
+//            QtConcurrent::mapped(
+//                selectedList,
+//                 [&,this](QTreeWidgetItem *selectedItem){
+//                    for(auto &item:selectedList){
+//                         QString selectedName = selectedItem->text(1);
+//                         QString selectedSize = selectedItem->text(2);
+//                         QString selectedLink = selectedItem->text(3);
+//                         Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
+//                    }
+//                }
+//            );
+
+//            QList<ItemInfo> result = QtConcurrent::mapped(
+//                selectedList,
+//                 [](QTreeWidgetItem *selectedItem) -> ItemInfo {
+//                    QString selectedName = selectedItem->text(1);
+//                    QString selectedSize = selectedItem->text(2);
+//                    QString selectedLink = selectedItem->text(3);
+//                    ItemInfo info;
+//                    info.name = selectedName;
+//                    info.size = selectedSize;
+//                    info.link = selectedLink;
+//                    return info;
+//                            }).results();
+
+//int func(int number){
+//    return number*2;
+//}
+
+
+//            QList<int> testList;
+//            testList.append(1);
+//            testList.append(2);
+//            testList.append(3);
+
+//            QtConcurrent::mapped(testList,func);
+
+//            for(auto& num:testList){
+//                qDebug("num:%d",num);
+//            }
+
+
+            DownloadWatcher.setFuture(QtConcurrent::map(selectedList,[](QTreeWidgetItem *selectedItem){
+                QString selectedName = selectedItem->text(1);
+                QString selectedSize = selectedItem->text(2);
+                QString selectedLink = selectedItem->text(3);
+                Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
+//                qDebug("selectedLink:%s,selectedName:%s,selectedSize:%s",selectedLink.toStdString().c_str(),selectedSize.toStdString().c_str(),selectedName.toStdString().c_str());
+                qDebug() << "Mainwindow.cpp Line 531: thread" << QThread::currentThreadId();
+            }));
+
+            QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
+            DownloadLoop.exec();
+
+
         }
 
         else{
-            qDebug("you selected the %s,which size is:%s",selectedListsName.toStdString().c_str(),selectedListsSize.toStdString().c_str());
 
-            DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,&Client1,std::ref(selectedListsLink),std::ref(selectedListsName),std::ref(selectedListsSize)));
+
+            qDebug("you selected the %s,which size is:%s",selectedListsName.toStdString().c_str(),selectedListsSize.toStdString().c_str());
+            DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,&Client1,std::ref(selectedListsName),std::ref(selectedListsSize),std::ref(selectedListsLink)));
             QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
             DownloadLoop.exec();
 
@@ -626,10 +697,9 @@ void MainWindow::keyPressEvent(QKeyEvent *event){
 
     switch(event->key()){
         case Qt::Key_Return: {
-            for(auto& TreeItem:selectedTreeWidgetItems){
-                emit ui->Filelist->itemDoubleClicked(TreeItem, 0); //回车->选择列表的双击
-            }
-
+//          for(auto& TreeItem:selectedTreeWidgetItems){
+                emit ui->Filelist->itemDoubleClicked(selectedTreeWidgetItems.at(0), 0); //回车->选择列表的双击
+//          }
             break;
         }
 

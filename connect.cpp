@@ -1,20 +1,13 @@
 #include "connect.h"
-//#include "qtimer.h"
+#include "qthread.h"
+
 #include <QDebug>
 #include <fstream>
 #include <filesystem> //C++ 17 to solve fstream wchar problem.
 
 #include <future>
-#include <chrono> //c++ 11计时库
 
 #include <regex>
-#include <QThread>
-
-//#include "updateUiThread.h"
-
-#define readyStatus std::future_status::ready
-#define timeoutStatus std::future_status::timeout
-
 
 #include "./dependences/extern_lib/httplib.h"
 
@@ -137,8 +130,6 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     //???连我也看不懂为什么invokeMethod不会自带注册float& 但是神奇的是
     //如果直接float糊脸 md 槽函数就会认为是float 因此与 float& 不相同而不响应
 
-    // QTimer::singleShot(0, this, SIGNAL(ProgressUpdate(itemName,FProgress)));
-    //QMetaObject::invokeMethod(this, "ProgressUpdate", Q_ARG(QString, itemName), Q_ARG(QString, itemSize), Q_ARG(float&, FProgress));
     emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
 
     auto res = cli.Get(itemLink.toStdString(),

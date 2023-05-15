@@ -6,6 +6,7 @@
 #include <QDebug>
 // #include "testdefine.h"
 
+inline std::regex DiskReg(R"(\w:)");
 inline std::regex HTMLLinkReg(R"(<\s*a\s+[^>]*href\s*=\s*"([^/view/]+[^"]*))", std::regex::icase); //target group1
 inline std::regex HTMLDiskReg(R"((path=)+(.*))", std::regex::icase);                               //target group1
 inline std::regex HTMLNameReg(R"(<\s*div\s+[^>]*class\s*=\"(dirname|filename)\">+([^<]*))", std::regex::icase);       //target group2

@@ -14,7 +14,6 @@ public:
 
     std::string cliFileSurfing();
     std::string cliFileSurfing(QString& Postition);
-
     
     void cliFileDownload(QString& itemName,QString& itemSize,QString& itemLink);
     void cliFileUpload(QString& TargetPosition,httplib::MultipartFormDataItems &items);

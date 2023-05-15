@@ -227,6 +227,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
 
     qDebug()<<"right triggered";
 
+    QString itemName = listItem->text(1);
     QString itemSize = listItem->text(2);
     QMenu *FileList_popmenu = new QMenu;
 
@@ -342,6 +343,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
                         FormData.content = std::move(filecontent);
                         TargetFile.close();
                         items.emplace_back(FormData);
+                        Client1.cliFileUpload(SurfingPath,items);
 
                     }
 
@@ -349,17 +351,10 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
             }
 
 
-//          qDebug()<<"please select the TargetPosition want to upload";
-
-            QString TargetPosition = R"(D:\cpp\app\HTTP-UI\build-HTTP-QT-Desktop_Qt_6_2_4_MinGW_64_bit-Debug\downloads)";
-
-            Client1.cliFileUpload(TargetPosition,items);
-
-
         }
     );
 
-     if(itemSize!="—"){
+    if(itemSize!="—"){
         //file area
         qDebug("right clicked the file");
         QAction *Download = new QAction("Download");
@@ -373,24 +368,25 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
         selectedList = Filelist->selectedItems();
 
         if(selectedList.size()>1){
-            for(auto &i:selectedList){
-                QString selectedListsName = i->text(1);
-                QString selectedListsSize = i->text(2);
+            for(auto &item:selectedList){
+                QString selectedListsName = item->text(1);
+                QString selectedListsSize = item->text(2);
+
 
                 if(selectedListsSize!="—"){
-                    qDebug("you selected the %s,which size is:%s",i->text(1).toStdString().c_str(),i->text(2).toStdString().c_str());
+                    qDebug("you selected the %s,which size is:%s",item->text(1).toStdString().c_str(),item->text(2).toStdString().c_str());
                 }
 
                 else{
                     qDebug("you select %s which is not a File!",selectedListsName.toStdString().c_str());
                     //此处也应弹出Download 但是是不可点击状态(灰色) 所以还是别直接return false完事
-                    Download->setEnabled(false);
                 }
 
 
             }
 
         }
+
 
         FileList_popmenu->insertAction(Refresh,Download);
         //signal Trigger add. but new QT5 string
@@ -417,7 +413,25 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
         //Action add.
         QAction *Open = new QAction("Open");
 
+        std::smatch match;
+
         FileList_popmenu->insertAction(Refresh,Open);
+        std::string tempString = itemName.toStdString();
+
+        std::regex_match(tempString, match, DiskReg);
+
+
+        if(match[0] == ""){
+        }
+
+        else{
+            qDebug("you selected a Disk:%s",match[0].str().c_str());
+            Delete->setEnabled(false);
+            Rename->setEnabled(false);
+            NewDir->setEnabled(false);
+            Upload->setEnabled(false);
+        }
+
 
         //signal Trigger add.
         //二度lambda 需要 通过this以及手动capture来捕获
@@ -459,13 +473,10 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
                 QString selectedSize = selectedItem->text(2);
                 QString selectedLink = selectedItem->text(3);
                 Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
-
-//              qDebug() << "Mainwindow.cpp Line 531: thread" << QThread::currentThreadId();
             }));
 
             QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
             DownloadLoop.exec();
-
 
         }
 
@@ -512,8 +523,6 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
            Information = Client1.cliFileSurfing(rootPath);
            HTMLExtract(Information,LinkVector,NameVector);
-
-
 
            for(int index = 0;index<=NameVector.size()-1;++index){
                QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
@@ -564,7 +573,7 @@ void MainWindow::Tab_pressed(){
 }
 
 void MainWindow::Rename(QTreeWidgetItem *listItem){
-    qDebug("Rename item:%s",listItem->text(1).toStdString().c_str());
+    qDebug("Ask Server to Rename item:%s",listItem->text(1).toStdString().c_str());
 }
 
 void MainWindow::Delete(){
@@ -572,16 +581,48 @@ void MainWindow::Delete(){
 
     selectedList = ui->Filelist->selectedItems();
 
+    QMessageBox RemoteDeletePrompt;
+
+    RemoteDeletePrompt.setStyleSheet(
+        R"(
+            QLabel {
+                min-width:300px;
+                min-height:40px;
+                font-size:12px;
+            }
+        )"
+    );
+
+    RemoteDeletePrompt.setWindowTitle("远端删除确认");
+    RemoteDeletePrompt.setText("将要向服务器发送请求以删除下列项目:");
+
+    QString DeleteFileList = "";
+
     for(auto& List:selectedList){
         qDebug("Ask for server to Delete item:%s",List->text(1).toStdString().c_str());
         LinkList.emplaceBack(List->text(3));
-        delete List;
+        DeleteFileList.append("\t"+List->text(1)+"\n");
     }
 
-    Client1.cliFileDelete(LinkList);
+    RemoteDeletePrompt.setInformativeText(DeleteFileList);
+
+    QPushButton *DeleteButton = RemoteDeletePrompt.addButton("Delete",QMessageBox::AcceptRole);
+    QPushButton *DiscardButton = RemoteDeletePrompt.addButton("Discard",QMessageBox::RejectRole);
+
+    RemoteDeletePrompt.exec();
+
+    if(RemoteDeletePrompt.clickedButton() == DeleteButton){
+        for(auto& List:selectedList){
+            delete List;
+        }
+        Client1.cliFileDelete(LinkList);
+    }
+
+    else if(RemoteDeletePrompt.clickedButton() == DiscardButton){
+       return;
+    }
 
 }
-
 
 void MainWindow::NewDir(){
     qDebug("create newDir.");

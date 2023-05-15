@@ -659,6 +659,21 @@ void MainWindow::clearStatusList(){
     qDebug("clear your List");
 }
 
+void MainWindow::closeEvent(QCloseEvent *event){
+    qApp->quit();
+//    QMessageBox closeConfirm;
+
+//    closeConfirm.question(this,tr("Quit"),tr("Are you sure to quit this application?"),QMessageBox::Yes|QMessageBox::No);
+
+//    int choice = closeConfirm.exec();
+
+//    switch(choice){
+//        case QMessageBox::Yes: {event->accept();qApp->quit();break;}
+//        case QMessageBox::No: {event->ignore();break;}
+//    }
+
+}
+
 //快捷键定义区
 
 //keyPressEvent 事件 不同于 信号与槽的高度封装 事件通常需要手动去配置 但同时自由度也比事件与槽高的多

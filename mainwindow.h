@@ -25,6 +25,7 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     void keyPressEvent(QKeyEvent *event);
+    void closeEvent(QCloseEvent *event);
 //    void mousePressEvent(QMouseEvent *event);
 
 private:

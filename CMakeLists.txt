@@ -25,12 +25,11 @@ set(PROJECT_SOURCES
         about.cpp about.h about.ui
         ./dependences/extern_lib/httplib.h
         ./dependences/extern_lib/json.hpp
-        connect.cpp connect.h
         ./dependences/HTMLFliter.h
+        connect.cpp connect.h
         ip_controlpanel.cpp ip_controlpanel.h ip_controlpanel.ui
         propertieswidget.cpp propertieswidget.h propertieswidget.ui
         DelegateProgressBar.h
-        updateUiThread.h
 
         ${TS_FILES}
 )

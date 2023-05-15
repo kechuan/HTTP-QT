@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-#include "qthread.h"
 
 #include <QApplication>
 #include <QTranslator>
@@ -11,7 +10,6 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    qDebug() << "main thread:" << QThread::currentThreadId();
 
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
@@ -25,6 +23,7 @@ int main(int argc, char *argv[])
 
      MainWindow w;
      w.show();
+
 
     return a.exec();
 }

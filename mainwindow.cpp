@@ -17,8 +17,8 @@
 
 #include <QtConcurrent/QtConcurrent>
 
-#define readyStatus std::future_status::ready
-#define timeoutStatus std::future_status::timeout
+//#define readyStatus std::future_status::ready
+//#define timeoutStatus std::future_status::timeout
 
 // std::future_status result_status;
 
@@ -53,7 +53,10 @@ MainWindow::MainWindow(QWidget *parent)
     AboutWindow->hide();
 
     IP_controlPanelWindow = new IP_controlPanel(nullptr,ui);
-    IP_controlPanelWindow->show();
+
+    //延迟弹出 以便弹窗后置在主程序
+    QTimer::singleShot(800,this,[&](){qDebug()<<"IP_show ID:"<<QThread::currentThreadId();IP_controlPanelWindow->show();});
+
 
     DockWidget = new PropertiesWidget(ui->statusShow,ui); //显示在statusShow里
     DockWidget->show();
@@ -116,12 +119,12 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(Button_DownloadSurfingPath,&QPushButton::clicked,this,[this,DownloadPathInput,Button_DownloadSurfingPath](){
         qDebug("you clicked the Button_DownloadSurfingPath");
 
-        QString homePath = QDir::homePath();
+        QString currentPath = QDir::currentPath();
 
         QUrl DownloadPathInputSelect = QFileDialog::getExistingDirectoryUrl(
             nullptr,
             tr("SurfingPath for DownloadPathInput"),
-            homePath
+            currentPath
         );
 
         if(!DownloadPathInputSelect.isEmpty()){
@@ -176,10 +179,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     //QObject是一个抽象类 似乎因为如此 connect需要用引用符号获得它的地址来进行操作
     //我真的特别谢谢QT还保留了地址的重载写法。。
-    //confused
 
-    //*UI不能即时更新
-    // QObject::connect(&Client1,&Connect::testSignal,DockWidget,&PropertiesWidget::testSlot);
+    QObject::connect(this,&MainWindow::DockProgressCreate,DockWidget,&PropertiesWidget::ProgressCreate);
 
 }
 
@@ -257,7 +258,6 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
                 QList<QString> newItemInformation{"-","..","—",ParentPath};
                 ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
-//                std::string Information = Client1.cliFileSurfing(FullIP,Port,SurfingPath);
                 std::string Information = Client1.cliFileSurfing(SurfingPath);
                 HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
 
@@ -447,8 +447,6 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
 
 }
 
-
-
 void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
 //这里的column代表这一行里点击的位置判定(Icon->0/FileName->1/Size->2...) 不过我并没有对column作出什么更改需求
@@ -468,19 +466,98 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
         if(selectedList.size()>1){
 
-            DownloadWatcher.setFuture(QtConcurrent::map(selectedList,[](QTreeWidgetItem *selectedItem){
-                QString selectedName = selectedItem->text(1);
-                QString selectedSize = selectedItem->text(2);
-                QString selectedLink = selectedItem->text(3);
-                Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
-            }));
+            QThreadPool DownloadPool;
+//            QThreadPool DownloadPool = QThreadPool::globalInstance();
+            DownloadPool.setMaxThreadCount(3); //额外最多允许3个线程
 
-            QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
+            int batch = 0;
+            QList<QTreeWidgetItem *> TempList;
+
+            for(auto Item:selectedList){
+                emit DockProgressCreate(Item);
+            }
+
+
+            while(batch*DownloadPool.maxThreadCount()<selectedList.size()){
+                int residual =  selectedList.size()-batch*DownloadPool.maxThreadCount();
+
+                if(selectedList.size()-batch*DownloadPool.maxThreadCount()<DownloadPool.maxThreadCount()){
+                    if(residual>1){
+                        for(int i = 0;i<residual;i++){
+                            TempList.append(selectedList.at(i+batch*DownloadPool.maxThreadCount()));
+                        }
+
+
+                        DownloadWatcher.setFuture(QtConcurrent::map(TempList,[&](QTreeWidgetItem *selectedItem){
+                            QString selectedName = selectedItem->text(1);
+                            QString selectedSize = selectedItem->text(2);
+                            QString selectedLink = selectedItem->text(3);
+                            Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
+                        }));
+
+                        QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
+                        TempList.clear();
+                        batch+=1;
+
+                    }
+
+                    else{
+
+                        TempList.append(selectedList.at(batch*DownloadPool.maxThreadCount()));
+
+                        DownloadWatcher.setFuture(QtConcurrent::map(TempList,[&](QTreeWidgetItem *selectedItem){
+                            QString selectedName = selectedItem->text(1);
+                            QString selectedSize = selectedItem->text(2);
+                            QString selectedLink = selectedItem->text(3);
+                            Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
+                        }));
+
+                        QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
+
+                        TempList.clear();
+                        batch+=1;
+                    }
+                }
+
+                else{
+
+                    QEventLoop insideLoop;
+
+                    QFutureWatcher<void> insideWatcher;
+
+                    for(int i = 0;i<DownloadPool.maxThreadCount();i++){
+                        TempList.append(selectedList.at(i+batch*DownloadPool.maxThreadCount()));
+                    }
+
+
+                    for(auto List:TempList){
+                        qDebug("number List:%s",List->text(1).toStdString().c_str());
+                    }
+
+                    insideWatcher.setFuture(QtConcurrent::map(TempList,[&](QTreeWidgetItem *selectedItem){
+                        QString selectedName = selectedItem->text(1);
+                        QString selectedSize = selectedItem->text(2);
+                        QString selectedLink = selectedItem->text(3);
+                        Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
+                    }));
+
+                    QObject::connect(&insideWatcher,&QFutureWatcher<void>::finished,&insideLoop,&QEventLoop::quit);
+
+                    insideLoop.exec();
+
+                    TempList.clear();
+                    batch+=1;
+
+                }
+
+            }
+
             DownloadLoop.exec();
-
         }
 
         else{
+            emit DockProgressCreate(listItem);
+
             qDebug("you selected the %s,which size is:%s",selectedListsName.toStdString().c_str(),selectedListsSize.toStdString().c_str());
             DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,&Client1,std::ref(selectedListsName),std::ref(selectedListsSize),std::ref(selectedListsLink)));
             QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);

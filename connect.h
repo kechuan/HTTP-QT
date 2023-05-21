@@ -22,6 +22,7 @@ public:
 
     std::string ReadTheFile(QString &Qpath,std::string &Information);
 
+
 private:
     void Abort();
 

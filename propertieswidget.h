@@ -37,7 +37,8 @@ public slots:
    void StatusChanged(int Status,QTreeWidgetItem* listItem);
 
    //Downloading&Uploading
-   
+
+   void ProgressCreate(QTreeWidgetItem *Item);
    void ProgressUpdate(const QString& itemName,const QString& itemSize,QString& itemLink,float& Progress);
 
    bool TaskList_Menu(QTreeWidgetItem *listItem, int column);

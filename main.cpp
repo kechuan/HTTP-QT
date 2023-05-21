@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "qthread.h"
 
 #include <QApplication>
 #include <QTranslator>
@@ -9,6 +10,8 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
+    qDebug()<<"main ID:"<<QThread::currentThreadId();
 
 
     QTranslator translator;

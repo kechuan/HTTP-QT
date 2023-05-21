@@ -13,6 +13,7 @@ enum StatusList{
     Paused,
     Finished,
     Failed,
+    Pending,
 };
 
 extern Connect Client1;
@@ -105,8 +106,6 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
             Pause->setEnabled(false);
         }
 
-
-
         TaskList_popmenu->move(ui->treeWidgetTaskQueue->cursor().pos());    //菜单显示在鼠标点击的位置
         TaskList_popmenu->show();
 
@@ -136,7 +135,6 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
 
 //generalFunction:
 
-
 void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetItems){
     qDebug()<<"deletePrompt";
 
@@ -163,7 +161,7 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetIt
     std::string Text = "已选中0个文件";
 
     if(selectedTreeWidgetItems.length()>1){
-        //UTF-8 汉字编码为3字节 然后再减去索引的1得出index:9
+        //UTF-8 汉字编码为3字节 "已选中" 然后再减去索引的1得出需要修改的目标index:9
         Text.replace(9,1,std::to_string(selectedTreeWidgetItems.length()));
         DeleteConfirm.setText(QString::fromStdString(Text));
     }
@@ -203,6 +201,20 @@ void PropertiesWidget::clearStatusList(){
     ui->treeWidgetTaskQueue->clear();
 }
 
+void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
+
+    QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
+
+    // Status,Filename,Progress,Size,Speed,DateTime,storagePath
+    QList<QString> newItemInformation{"Pending",Item->text(1),"null",Item->text(2),"null","DateTime",QString::fromStdString(DownloadPath)};
+
+    ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
+
+    treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+    treeWidgetTaskQueue->setItemDelegateForColumn(2, progressBar);
+
+}
+
 void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& itemSize,QString& itemLink,float& Progress){
 
     qDebug() << "from thread slot:" << QThread::currentThreadId();
@@ -218,13 +230,8 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& ite
         QList<QString> newItemInformation{"Downloading",itemName,"null",itemSize,"null","DateTime",QString::fromStdString(DownloadPath)};
         ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
 
-
-        // QMetaObject::invokeMethod(this,[&](){
-            treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
-            treeWidgetTaskQueue->setItemDelegateForColumn(2, progressBar);
-        // });
-
-
+        treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+        treeWidgetTaskQueue->setItemDelegateForColumn(2, progressBar);
 
         qDebug("topLevelItemCount:%d",treeWidgetTaskQueue->topLevelItemCount());
     }
@@ -232,13 +239,14 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& ite
     else{
         QTreeWidgetItem *currentItem = matchList.at(0);
 
-
         QMetaObject::invokeMethod(this,[&](){
             currentItem->setData(2, Qt::UserRole, Progress); //数据更新
+            StatusChanged(Downloading,currentItem);
 
             if(static_cast<int>(round(Progress))==100){
                 qDebug("%s Download Complete!",itemName.toStdString().c_str());
-                StatusChanged(3,currentItem);
+                StatusChanged(Finished,currentItem);
+                currentItem->setData(4, Qt::UserRole, ""); //数据更新
             }
 
         });

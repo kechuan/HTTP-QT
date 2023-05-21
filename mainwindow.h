@@ -79,8 +79,7 @@ private slots:
 signals:
     void connetPressed();
     void DownloadPressed(const char* Status,QTreeWidgetItem*);
-
-    // void DownloadPressed(std::string& Status,QTreeWidgetItem*);
+    void DockProgressCreate(QTreeWidgetItem *Item);
 
 };
 

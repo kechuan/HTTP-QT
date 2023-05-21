@@ -10,6 +10,7 @@
 #include <regex>
 
 #include "./dependences/extern_lib/httplib.h"
+// #include "./writeFile.h"
 
 using namespace httplib;
 
@@ -22,6 +23,7 @@ extern std::string DownloadPath;
 
 extern QString FullIP;
 extern int Port;
+
 
 void WriteToFile(std::string DownloadPath,std::string& FileName,std::string& Data); //预声明
 
@@ -82,10 +84,28 @@ std::string Connect::cliFileSurfing(QString& Postition){
     return body;
 }
 
+
+
+void WriteToFile(std::string path,std::string& FileName,std::string& Data){ //overload
+    qDebug("Connect.cpp Line 91: path:%s",path.c_str());
+
+//    std::string realPath = path.
+//方案一 将string转成wchar_t
+//方案二(C++ 17 add,C++ 20 deprecated) 使用std::filesystem::u8path(path) 来使用utf-8编码对path进行操作
+
+    std::ofstream writeFile(std::filesystem::u8path(path), std::ios::binary);
+
+    writeFile<<Data;
+    writeFile.close();
+
+}
+
+
 void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemLink){
 
     Client cli(FullIP.toStdString(),Port);
     std::string fileName = itemName.toStdString();
+    std::string Fullpath = DownloadPath;
 
     qDebug("download trigger Link:%s",itemLink.toStdString().c_str());
 
@@ -130,7 +150,18 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     //???连我也看不懂为什么invokeMethod不会自带注册float& 但是神奇的是
     //如果直接float糊脸 md 槽函数就会认为是float 因此与 float& 不相同而不响应
 
-    emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
+
+//File Precreate
+    Fullpath.append(fileName.c_str());
+    qDebug("Precreate empty File:%s",Fullpath.c_str());
+
+    std::ofstream newFile(std::filesystem::u8path(Fullpath), std::ios::binary);
+
+    if(!newFile.is_open()){
+        qDebug()<<"create new File failed";
+    }
+
+//    emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
 
     auto res = cli.Get(itemLink.toStdString(),
       [&](const char *data, size_t data_length) {
@@ -138,7 +169,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
         
         FProgress = (body.size()*100/fliterSize);
         
-        if(intervalflag == 2500){
+        if(intervalflag == 25000){
             intervalflag = 0;
             emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
         }
@@ -149,10 +180,10 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
 
     emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
 
-    qDebug() << "Connect.cpp Line 124: thread cliFileDownload" << QThread::currentThreadId();
+    qDebug() << "Connect.cpp Line 184: thread cliFileDownload" << QThread::currentThreadId();
+    qDebug("Connect.cpp Line 186:FileSize:%zu",body.size());
 
-    qDebug("Connect.cpp Line 84:FileSize:%zu",body.size());
-    WriteToFile(DownloadPath,fileName,body);
+    WriteToFile(Fullpath,fileName,body);
 
 }
 
@@ -191,22 +222,6 @@ void Connect::cliFileDelete(QList<QString>& TargetPosition){
     }
 
 }
-
-void WriteToFile(std::string path,std::string& FileName,std::string& Data){ //overload
-    path.append(FileName.c_str());
-    qDebug("path:%s",path.c_str());
-
-//    std::string realPath = path.
-//方案一 将string转成wchar_t
-//方案二(C++ 17 add,C++ 20 deprecated) 使用std::filesystem::u8path(path) 来使用utf-8编码对path进行操作
-
-    std::ofstream newFile(std::filesystem::u8path(path), std::ios::binary);
-
-    newFile<<Data;
-    newFile.close();
-        
-}
-
 
 void ReadTheFile(QString &Qpath,std::string &Information){
     std::ifstream TargetFile;

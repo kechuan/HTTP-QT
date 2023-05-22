@@ -7,6 +7,16 @@
 #include <QtWidgets>
 #include <QThread>
 
+enum QueueList{
+    StatusList,
+    FilenameList,
+    ProgressList,
+    SizeList,
+    SpeedList,
+    DateTimeList,
+    StoragePathList,
+};
+
 enum StatusList{
     Downloading,
     Uploading,
@@ -60,7 +70,7 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
     if(listItem==nullptr) return false;
 
     if(qApp->mouseButtons() == Qt::RightButton){
-        QString Status = listItem->text(0);
+        QString Status = listItem->text(StatusList);
 
         QMenu *TaskList_popmenu = new QMenu;
 
@@ -149,7 +159,7 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetIt
             QLabel {
                 min-width:100px;
                 min-height:40px;
-                font-size:12px;
+                font-size:1ProgressBarpx;
             }
         )"
     );
@@ -174,7 +184,7 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetIt
 
     if(DeleteConfirm.clickedButton() == DeleteButton){
         for(auto CurrentItem:selectedTreeWidgetItems){
-            QString FullPath = CurrentItem->text(6)+CurrentItem->text(1);
+            QString FullPath = CurrentItem->text(FilenameList)+CurrentItem->text(FilenameList);
             //correctWay delete u8
             std::filesystem::remove(std::filesystem::u8path(FullPath.toStdString().c_str()));
             delete CurrentItem;
@@ -211,7 +221,7 @@ void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
     ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
 
     treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
-    treeWidgetTaskQueue->setItemDelegateForColumn(2, progressBar);
+    treeWidgetTaskQueue->setItemDelegateForColumn(ProgressList, progressBar);
 
 }
 
@@ -231,7 +241,7 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& ite
         ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
 
         treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
-        treeWidgetTaskQueue->setItemDelegateForColumn(2, progressBar);
+        treeWidgetTaskQueue->setItemDelegateForColumn(ProgressList, progressBar);
 
         qDebug("topLevelItemCount:%d",treeWidgetTaskQueue->topLevelItemCount());
     }
@@ -240,13 +250,13 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& ite
         QTreeWidgetItem *currentItem = matchList.at(0);
 
         QMetaObject::invokeMethod(this,[&](){
-            currentItem->setData(2, Qt::UserRole, Progress); //数据更新
+            currentItem->setData(ProgressList, Qt::UserRole, Progress); //数据更新
             StatusChanged(Downloading,currentItem);
 
             if(static_cast<int>(round(Progress))==100){
                 qDebug("%s Download Complete!",itemName.toStdString().c_str());
                 StatusChanged(Finished,currentItem);
-                currentItem->setData(4, Qt::UserRole, ""); //数据更新
+                currentItem->setData(SpeedList, Qt::UserRole, ""); //数据更新
             }
 
         });
@@ -258,31 +268,34 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& ite
 
 void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 
-    qDebug("listItem:%s Status change. Status Code: %d",listItem->text(1).toStdString().c_str(),Status);
+    qDebug("listItem:%s Status change. Status Code: %d",listItem->text(FilenameList).toStdString().c_str(),Status);
 
     switch(Status){
 
         //setText(columnIndex,"String")
 
         case Downloading: {
-            listItem->setText(0,"Downloading"); break; 
+            listItem->setText(StatusList,"Downloading"); break; 
         }
 
         case Uploading: {
-            listItem->setText(0,"Paused"); break;
+            listItem->setText(StatusList,"Uploading"); break;
         }
 
         case Paused: {
-            listItem->setText(0,"Paused"); break;
+            listItem->setText(StatusList,"Paused"); break;
+            //如果我要在这里发送暂停请求
+
+            //那么我首先要到达的就是处在mainwindow.cpp的eventLoop 以命令线程暂停。。
         }
 
         case Failed: {
-            listItem->setText(0,"Failed"); break;
+            listItem->setText(StatusList,"Failed"); break;
         }
 
         case Finished:{
-            listItem->setText(0,"Finished");
-            listItem->setText(5,QTime::currentTime().toString());
+            listItem->setText(StatusList,"Finished");
+            listItem->setText(DateTimeList,QTime::currentTime().toString());
 
             break;
         }
@@ -296,14 +309,14 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 void PropertiesWidget::OpenFile(QTreeWidgetItem* listItem,int colmun){
 //    QDesktopServices::openUrl(QUrl("file:"+listItem->text(6)+"\\"+listItem->text(1),QUrl::TolerantMode));
 
-    QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(6)+"\\"+listItem->text(1))));
+    QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(StoragePathList)+"\\"+listItem->text(FilenameList))));
 }
 
 
 void PropertiesWidget::OpenFileFromFolder(QTreeWidgetItem* listItem,int colmun){
-    qDebug("storagePath:%s",listItem->text(6).toStdString().c_str());
-//    QDesktopServices::openUrl(QUrl("file:"+listItem->text(6),QUrl::TolerantMode));
-    QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(6))));
+    qDebug("storagePath:%s",listItem->text(StoragePathList).toStdString().c_str());
+//    QDesktopServices::openUrl(QUrl("file:"+listItem->text(StoragePathList),QUrl::TolerantMode));
+    QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(StoragePathList))));
 }
 
 void PropertiesWidget::ActionPressed(){
@@ -321,23 +334,20 @@ void PropertiesWidget::ActionPressed(){
 
     if(button->text() == "Continue"){
         for(auto& TreeItem:selectedTreeWidgetItems){
-            StatusChanged(0,TreeItem);
+            StatusChanged(Downloading,TreeItem);
         }
         return;
     }
 
     else if(button->text() == "Pause"){
         for(auto& TreeItem:selectedTreeWidgetItems){
-            StatusChanged(2,TreeItem);
+            StatusChanged(Paused,TreeItem);
         }
         return;
     }
 
     else{
         deletePrompt(selectedTreeWidgetItems);
-//        for(auto& TreeItem:selectedTreeWidgetItems){
-//            if(TreeItem!=nullptr) delete TreeItem;
-//        }
         return;
     }
 
@@ -354,7 +364,7 @@ void PropertiesWidget::keyPressEvent(QKeyEvent *event){
             case Qt::Key_Return: {
                 for(auto& TreeItem:selectedTreeWidgetItems){
                     qDebug()<<"listItem Address:"<<TreeItem;
-                    if(TreeItem->text(0)!="Finished") continue; //未在完成状态时 不要打开它
+                    if(TreeItem->text(StatusList)!="Finished") continue; //未在完成状态时 不要打开它
                     emit ui->treeWidgetTaskQueue->itemDoubleClicked(TreeItem, 0);
                 }
                 break;

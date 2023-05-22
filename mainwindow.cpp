@@ -13,14 +13,7 @@
 
 #include <vector>
 
-#include <future>
-
 #include <QtConcurrent/QtConcurrent>
-
-//#define readyStatus std::future_status::ready
-//#define timeoutStatus std::future_status::timeout
-
-// std::future_status result_status;
 
 std::vector<std::string> LinkVector = {};
 std::vector<std::string> PathVector = {};

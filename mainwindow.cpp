@@ -54,6 +54,8 @@ MainWindow::MainWindow(QWidget *parent)
     DockWidget = new PropertiesWidget(ui->statusShow,ui); //显示在statusShow里
     DockWidget->show();
 
+//    qDebug("Client1 Size:%zu",sizeof(Client1));
+
 
    //第一个值:其默认值本来就是 QWidget *parent = nullptr 即父级 也就是所谓的Mainwindow身上 重新指向nullptr意思就和上方的About()含义一致
    //第二个arg:获取ui信息 谁的? MainWindow的
@@ -174,6 +176,39 @@ MainWindow::MainWindow(QWidget *parent)
     //我真的特别谢谢QT还保留了地址的重载写法。。
 
     QObject::connect(this,&MainWindow::DockProgressCreate,DockWidget,&PropertiesWidget::ProgressCreate);
+
+    QPushButton *pushButton_MaxThreadCount = ui->pushButton_MaxThreadCount;
+
+    QSlider *ThreadsSlider = ui->horizontalSlider_MaxThreadCount;
+    QLabel *label_ThreadRange = ui->label_ThreadRange;
+    QLabel *label_MaxThreadCount = ui->label_MaxThreadCount;
+
+    ThreadsSlider->hide();
+    label_ThreadRange->hide();
+
+
+    QObject::connect(pushButton_MaxThreadCount,&QPushButton::clicked,this,[&,ThreadsSlider,label_ThreadRange]{
+        ThreadsSlider->show();
+        label_ThreadRange->show();
+    });
+
+    QObject::connect(ThreadsSlider,&QSlider::sliderMoved,this,[&,ThreadsSlider,label_MaxThreadCount](int number){
+        label_MaxThreadCount->setText(QString::fromStdString(std::to_string(number)));
+    });
+
+    QObject::connect(ThreadsSlider,&QSlider::sliderReleased,this,[&,ThreadsSlider,label_ThreadRange]{
+        ThreadsSlider->hide();
+        label_ThreadRange->hide();
+    });
+
+
+
+
+
+
+
+
+
 
 }
 
@@ -460,8 +495,8 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         if(selectedList.size()>1){
 
             QThreadPool DownloadPool;
-//            QThreadPool DownloadPool = QThreadPool::globalInstance();
-            DownloadPool.setMaxThreadCount(3); //额外最多允许3个线程
+            qDebug("ui->label_MaxThreadCount->text():%d",ui->label_MaxThreadCount->text().toInt());
+            DownloadPool.setMaxThreadCount(ui->label_MaxThreadCount->text().toInt()); //额外最多允许3个线程
 
             int batch = 0;
             QList<QTreeWidgetItem *> TempList;

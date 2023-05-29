@@ -184,8 +184,9 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetIt
 
     if(DeleteConfirm.clickedButton() == DeleteButton){
         for(auto CurrentItem:selectedTreeWidgetItems){
-            QString FullPath = CurrentItem->text(FilenameList)+CurrentItem->text(FilenameList);
+            QString FullPath = CurrentItem->text(StoragePathList)+CurrentItem->text(FilenameList);
             //correctWay delete u8
+            qDebug("deletePath:%s",FullPath.toStdString().c_str());
             std::filesystem::remove(std::filesystem::u8path(FullPath.toStdString().c_str()));
             delete CurrentItem;
         }
@@ -268,7 +269,7 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& ite
 
 void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 
-    qDebug("listItem:%s Status change. Status Code: %d",listItem->text(FilenameList).toStdString().c_str(),Status);
+
 
     switch(Status){
 
@@ -283,9 +284,10 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
         }
 
         case Paused: {
+            qDebug("listItem:%s Status change. Status Code: %d",listItem->text(FilenameList).toStdString().c_str(),Status);
             listItem->setText(StatusList,"Paused"); break;
-            //如果我要在这里发送暂停请求
 
+            //如果我要在这里发送暂停请求
             //那么我首先要到达的就是处在mainwindow.cpp的eventLoop 以命令线程暂停。。
         }
 
@@ -294,6 +296,7 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
         }
 
         case Finished:{
+            qDebug("listItem:%s Status change. Status Code: %d",listItem->text(FilenameList).toStdString().c_str(),Status);
             listItem->setText(StatusList,"Finished");
             listItem->setText(DateTimeList,QTime::currentTime().toString());
 
@@ -307,15 +310,12 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 //Slot:
 
 void PropertiesWidget::OpenFile(QTreeWidgetItem* listItem,int colmun){
-//    QDesktopServices::openUrl(QUrl("file:"+listItem->text(6)+"\\"+listItem->text(1),QUrl::TolerantMode));
-
-    QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(StoragePathList)+"\\"+listItem->text(FilenameList))));
+    QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(StoragePathList)+listItem->text(FilenameList))));
 }
 
 
 void PropertiesWidget::OpenFileFromFolder(QTreeWidgetItem* listItem,int colmun){
     qDebug("storagePath:%s",listItem->text(StoragePathList).toStdString().c_str());
-//    QDesktopServices::openUrl(QUrl("file:"+listItem->text(StoragePathList),QUrl::TolerantMode));
     QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(StoragePathList))));
 }
 

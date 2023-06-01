@@ -4,6 +4,7 @@
 #include "connect.h"
 
 #include "./dependences/HTMLFliter.h"
+#include "qgraphicsitem.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -14,6 +15,10 @@
 #include <vector>
 
 #include <QtConcurrent/QtConcurrent>
+
+#include <QGraphicsOpacityEffect>
+#include <QPropertyAnimation>
+#include <QParallelAnimationGroup>
 
 std::vector<std::string> LinkVector = {};
 std::vector<std::string> PathVector = {};
@@ -38,7 +43,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this); //this指向UI自己
-    this->setWindowTitle("test Window"); //标题定义
+    this->setWindowTitle("HTTP-QT"); //标题定义
 
     //声明其他ui类
     AboutWindow = new About();
@@ -53,8 +58,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     DockWidget = new PropertiesWidget(ui->statusShow,ui); //显示在statusShow里
     DockWidget->show();
-
-//    qDebug("Client1 Size:%zu",sizeof(Client1));
 
 
    //第一个值:其默认值本来就是 QWidget *parent = nullptr 即父级 也就是所谓的Mainwindow身上 重新指向nullptr意思就和上方的About()含义一致
@@ -178,33 +181,74 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(this,&MainWindow::DockProgressCreate,DockWidget,&PropertiesWidget::ProgressCreate);
 
     QPushButton *pushButton_MaxThreadCount = ui->pushButton_MaxThreadCount;
-
     QSlider *ThreadsSlider = ui->horizontalSlider_MaxThreadCount;
-    QLabel *label_ThreadRange = ui->label_ThreadRange;
-    QLabel *label_MaxThreadCount = ui->label_MaxThreadCount;
-
-    ThreadsSlider->hide();
-    label_ThreadRange->hide();
+    QLabel *label_MaxThreadCountValue = ui->label_MaxThreadCountValue;
+//  QLabel *label_ThreadRange = ui->label_ThreadRange;
 
 
-    QObject::connect(pushButton_MaxThreadCount,&QPushButton::clicked,this,[&,ThreadsSlider,label_ThreadRange]{
-        ThreadsSlider->show();
-        label_ThreadRange->show();
+    QParallelAnimationGroup *MaxThreadAnimation = new QParallelAnimationGroup(this);
+
+
+    //初始位置:绝对
+    QPoint InitalAbsButtonPos = pushButton_MaxThreadCount->pos();
+    QPoint InitalAbsLabelPos = label_MaxThreadCountValue->pos();
+
+//    //初始位置:相对于父级widget 绝对->相对
+//    QPoint InitalRelButtonPos = pushButton_MaxThreadCount->mapFromGlobal(InitalAbsButtonPos);
+//    QPoint InitalRelLabelPos = label_MaxThreadCountValue->mapFromGlobal(InitalAbsLabelPos);
+
+    //目标运动结束后的相对位置
+    QPoint TargetRelButtonPos = QPoint(159,10);
+    QPoint TargetRelLabelPos = QPoint(235,9);
+
+    //相对位置转化为绝对目标位置 相对->绝对
+    QPoint TargetAbsThreadButtonPos = pushButton_MaxThreadCount->mapToParent(TargetRelButtonPos);
+    QPoint TargetAbsThreadLabelPos = label_MaxThreadCountValue->mapToParent(TargetRelLabelPos);
+
+    QPropertyAnimation *FadingButton = new QPropertyAnimation(pushButton_MaxThreadCount,"pos");
+    QPropertyAnimation *FadingLabel = new QPropertyAnimation(label_MaxThreadCountValue,"pos");
+
+
+    QGraphicsOpacityEffect *SliderOpacity = new QGraphicsOpacityEffect(ThreadsSlider);          //Add opacity prop to uiWidget(ThreadsSlider)
+    SliderOpacity->setOpacity(1.0);                                                             //give value
+    ThreadsSlider->setGraphicsEffect(SliderOpacity);                                            //apply opacity in QObject
+    QPropertyAnimation *FadingSlider = new QPropertyAnimation(SliderOpacity,"opacity",this);    //QPropertyAnimation get opacity prop in SliderOpacity
+
+    MaxThreadAnimation->addAnimation(FadingButton);
+    MaxThreadAnimation->addAnimation(FadingLabel);
+    MaxThreadAnimation->addAnimation(FadingSlider);
+
+    FadingButton->setDuration(500);FadingButton->setEasingCurve(QEasingCurve::Linear);
+    FadingLabel->setDuration(500);FadingLabel->setEasingCurve(QEasingCurve::Linear);
+    FadingSlider->setDuration(500);FadingSlider->setEasingCurve(QEasingCurve::Linear);
+
+//inital Status:
+//    label_ThreadRange->hide();
+
+    QObject::connect(pushButton_MaxThreadCount,&QPushButton::clicked,this,[=]{
+        //pos改变之后 其他所有pos全部都跟着变 导致原有设置的hide show 以及动画带来的pos修改 全部重置
+
+        FadingSlider->setEndValue(1.0);
+        FadingButton->setEndValue(QPoint(4,10));
+        FadingLabel->setEndValue(QPoint(80,9));
+
+        MaxThreadAnimation->start();
+
+
     });
 
-    QObject::connect(ThreadsSlider,&QSlider::sliderMoved,this,[&,ThreadsSlider,label_MaxThreadCount](int number){
-        label_MaxThreadCount->setText(QString::fromStdString(std::to_string(number)));
+    QObject::connect(ThreadsSlider,&QSlider::sliderMoved,this,[=](int number){
+        label_MaxThreadCountValue->setText(QString::fromStdString(std::to_string(number)));
     });
 
-    QObject::connect(ThreadsSlider,&QSlider::sliderReleased,this,[&,ThreadsSlider,label_ThreadRange]{
-        ThreadsSlider->hide();
-        label_ThreadRange->hide();
+    QObject::connect(ThreadsSlider,&QSlider::sliderReleased,this,[=]{
+        FadingSlider->setEndValue(0.0);
+        FadingButton->setEndValue(TargetAbsThreadButtonPos);
+        FadingLabel->setEndValue(TargetAbsThreadLabelPos);
+
+        MaxThreadAnimation->start();
+        pushButton_MaxThreadCount->raise();
     });
-
-
-
-
-
 
 
 
@@ -495,8 +539,8 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         if(selectedList.size()>1){
 
             QThreadPool DownloadPool;
-            qDebug("ui->label_MaxThreadCount->text():%d",ui->label_MaxThreadCount->text().toInt());
-            DownloadPool.setMaxThreadCount(ui->label_MaxThreadCount->text().toInt()); //额外最多允许3个线程
+            qDebug("ui->label_MaxThreadCountValue->text():%d",ui->label_MaxThreadCountValue->text().toInt());
+            DownloadPool.setMaxThreadCount(ui->label_MaxThreadCountValue->text().toInt()); //额外最多允许3个线程
 
             int batch = 0;
             QList<QTreeWidgetItem *> TempList;

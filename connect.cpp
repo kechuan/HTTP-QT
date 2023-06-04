@@ -10,7 +10,7 @@
 #include <regex>
 
 #include "./dependences/extern_lib/httplib.h"
-// #include "./writeFile.h"
+#include <QTimer>
 
 using namespace httplib;
 
@@ -18,8 +18,8 @@ using namespace httplib;
 
 using string = std::string;
 
-extern std::map<std::string,int> TaskMap;
 extern std::string DownloadPath;
+
 
 extern QString FullIP;
 extern int Port;
@@ -103,6 +103,8 @@ void WriteToFile(std::string path,std::string& FileName,std::string& Data){ //ov
 
 void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemLink){
 
+    qDebug() << "Connect.cpp Line 184: thread cliFileDownload" << QThread::currentThreadId();
+
     Client cli(FullIP.toStdString(),Port);
     std::string fileName = itemName.toStdString();
     std::string Fullpath = DownloadPath;
@@ -146,14 +148,12 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     int intervalflag = 0;
     float FProgress;
 
-//    qRegisterMetaType<float&>("float&");
-    //???连我也看不懂为什么invokeMethod不会自带注册float& 但是神奇的是
-    //如果直接float糊脸 md 槽函数就会认为是float 因此与 float& 不相同而不响应
 
 
-//File Precreate
+//File Precreate Prevent DownloadPath Change Error.
     Fullpath.append(fileName.c_str());
     qDebug("Precreate empty File:%s",Fullpath.c_str());
+//    emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
 
     std::ofstream newFile(std::filesystem::u8path(Fullpath), std::ios::binary);
 
@@ -161,26 +161,86 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
         qDebug()<<"create new File failed";
     }
 
-//    emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
+
+    float floatSpeed = 0;
+
+    float RecordProgress = 0;
 
     auto res = cli.Get(itemLink.toStdString(),
       [&](const char *data, size_t data_length) {
+
+//        floatSpeed += sizeof(data);
+
         body.append(std::move(data), data_length);
         
         FProgress = (body.size()*100/fliterSize);
-        
+
+        QString itemSpeed;
+
+        //25000 tick? update
         if(intervalflag == 25000){
+
+            if(!RecordProgress){
+                RecordProgress = FProgress;
+                floatSpeed = (FProgress*fliterSize)/100;
+                qDebug("inital Float Speed:%f",floatSpeed);
+//                itemSpeed = QString::fromStdString(std::to_string(FProgress*fliterSize));
+            }
+
+            //After
+
+            else{
+                float Residual;
+                Residual = (FProgress - RecordProgress)/100;
+                floatSpeed = Residual*fliterSize;
+//                itemSpeed = QString::fromStdString(std::to_string(Residual*fliterSize));
+            }
+
+            if(floatSpeed>1024*1024*1024){
+                floatSpeed = floatSpeed/1024/1024/1024;
+                itemSpeed = QString::fromStdString(std::to_string(floatSpeed).substr(0,6))+"GB/s";
+            }
+
+            else if(floatSpeed>1024*1024){
+
+                floatSpeed = floatSpeed/1024/1024;
+                itemSpeed = QString::fromStdString(std::to_string(floatSpeed).substr(0,6))+"MB/s";
+
+            }
+
+            else if(floatSpeed>1024){
+
+                floatSpeed = floatSpeed/1024;
+                itemSpeed = QString::fromStdString(std::to_string(floatSpeed).substr(0,6))+"KB/s";
+
+            }
+
+            else{
+                itemSpeed = QString::fromStdString(std::to_string(floatSpeed).substr(0,6))+"B/s";
+            }
+
+
+            qDebug("Second Float Speed:%f",floatSpeed);
+
+            emit ProgressUpdate(itemName,FProgress,itemSize,itemSpeed,itemLink);
+
+            floatSpeed = 0;
             intervalflag = 0;
-            emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
+
+
+
         }
 
         ++intervalflag;
+
        return true;
     });
 
-    emit ProgressUpdate(itemName,itemSize,itemLink,FProgress);
 
-    qDebug() << "Connect.cpp Line 184: thread cliFileDownload" << QThread::currentThreadId();
+//    DownloadCounterPerSecond->stop();
+
+    emit ProgressUpdate(itemName,FProgress,itemSize,"—",itemLink);
+
     qDebug("Connect.cpp Line 186:FileSize:%zu",body.size());
 
     WriteToFile(Fullpath,fileName,body);

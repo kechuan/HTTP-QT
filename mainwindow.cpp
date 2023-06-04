@@ -4,7 +4,6 @@
 #include "connect.h"
 
 #include "./dependences/HTMLFliter.h"
-#include "qgraphicsitem.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -24,6 +23,9 @@ std::vector<std::string> LinkVector = {};
 std::vector<std::string> PathVector = {};
 std::vector<std::string> NameVector = {};
 std::vector<std::string> SizeVector = {};
+
+
+
 
 QString FullIP;int Port;
 
@@ -180,18 +182,28 @@ MainWindow::MainWindow(QWidget *parent)
 
     QObject::connect(this,&MainWindow::DockProgressCreate,DockWidget,&PropertiesWidget::ProgressCreate);
 
+    // QObject::connect(&Client1,&Connect::DownloadSpeedUpdate,this,[this](size_t bodySize){
+    //     ui->label_DownloadSpeedValue->setText(QString::fromStdString(std::to_string(bodySize)));
+    // });
+
+    QObject::connect(&Client1,&Connect::DownloadSpeedUpdate,this,[this](float bodySize){
+        ui->label_DownloadSpeedValue->setText(
+            QString::fromStdString(
+                std::to_string(bodySize).substr(0,6) // 123.45
+            )
+        );
+    });
+
     QPushButton *pushButton_MaxThreadCount = ui->pushButton_MaxThreadCount;
     QSlider *ThreadsSlider = ui->horizontalSlider_MaxThreadCount;
     QLabel *label_MaxThreadCountValue = ui->label_MaxThreadCountValue;
-//  QLabel *label_ThreadRange = ui->label_ThreadRange;
-
 
     QParallelAnimationGroup *MaxThreadAnimation = new QParallelAnimationGroup(this);
 
 
     //初始位置:绝对
-    QPoint InitalAbsButtonPos = pushButton_MaxThreadCount->pos();
-    QPoint InitalAbsLabelPos = label_MaxThreadCountValue->pos();
+//    QPoint InitalAbsButtonPos = pushButton_MaxThreadCount->pos();
+//    QPoint InitalAbsLabelPos = label_MaxThreadCountValue->pos();
 
 //    //初始位置:相对于父级widget 绝对->相对
 //    QPoint InitalRelButtonPos = pushButton_MaxThreadCount->mapFromGlobal(InitalAbsButtonPos);
@@ -239,6 +251,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     QObject::connect(ThreadsSlider,&QSlider::sliderMoved,this,[=](int number){
         label_MaxThreadCountValue->setText(QString::fromStdString(std::to_string(number)));
+//        label_DownloadSpeedValue->setText(QString::fromStdString(std::to_string(number)));
     });
 
     QObject::connect(ThreadsSlider,&QSlider::sliderReleased,this,[=]{
@@ -493,17 +506,13 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
         std::regex_match(tempString, match, DiskReg);
 
 
-        if(match[0] == ""){
-        }
-
-        else{
+        if(match[0] != ""){
             qDebug("you selected a Disk:%s",match[0].str().c_str());
             Delete->setEnabled(false);
             Rename->setEnabled(false);
             NewDir->setEnabled(false);
             Upload->setEnabled(false);
         }
-
 
         //signal Trigger add.
         //二度lambda 需要 通过this以及手动capture来捕获
@@ -664,9 +673,6 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         //Filelist update part.
         ui->Filelist->clear();
 
-        QList<QString> newItemInformation{"-","..","—",ParentPath};
-        ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
-
         if(selectedListsName==".."&&selectedListsLink==rootPath){
            qDebug("redirect to the disk select.");
 
@@ -674,14 +680,19 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
            HTMLExtract(Information,LinkVector,NameVector);
 
            for(int index = 0;index<=NameVector.size()-1;++index){
-               QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
-               QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
+               QList<QString> DiskInformation{"-",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
+               QTreeWidgetItem *newItem = new QTreeWidgetItem(DiskInformation);
                ui->Filelist->addTopLevelItem(newItem);
             }
 
         }
 
+
+
         else{
+
+            QList<QString> newItemInformation{"-","..","—",ParentPath};
+            ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
             if(!NameVector.size()){
                 qDebug("empty File Open");
@@ -841,7 +852,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event){
         }
 
         case Qt::Key_Backspace:{
-            if(!LinkVector.size()){
+            if(LinkVector.size()!=0){
                 QTreeWidgetItem *UpperFolder = ui->Filelist->topLevelItem(0);
                 emit ui->Filelist->itemDoubleClicked(UpperFolder, 0); //退格->表示双击上层
                 break;

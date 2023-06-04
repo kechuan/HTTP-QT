@@ -27,7 +27,10 @@ private:
     void Abort();
 
 signals:
-    void ProgressUpdate(const QString& itemName,const QString& itemSize,QString& itemLink,float &FProgress);
+    // void ProgressUpdate(const QString& itemName,const QString& itemSize,const QString& itemLink,const float &FProgress);
+    void ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSize,const QString& itemSpeed,const QString& itemLink);
+    // void DownloadSpeedUpdate(size_t& bodySize);
+    void DownloadSpeedUpdate(float& bodySize);
     void Downloading(std::map<std::string,int> &TaskMap,std::string& Name,int &Progress);
 
 };

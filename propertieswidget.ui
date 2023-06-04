@@ -163,6 +163,9 @@
            <property name="midLineWidth">
             <number>0</number>
            </property>
+           <attribute name="headerDefaultSectionSize">
+            <number>180</number>
+           </attribute>
            <column>
             <property name="text">
              <string>Status(hidden)</string>

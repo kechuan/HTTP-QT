@@ -43,6 +43,10 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
     treeWidgetTaskQueue->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
+    //疑似自适应长度
+    treeWidgetTaskQueue->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    treeWidgetTaskQueue->header()->setMinimumSectionSize(80);
+
     QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemPressed,this,&PropertiesWidget::TaskList_Menu); //item按下判断触发
     QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemDoubleClicked,this,&PropertiesWidget::OpenFile);
 
@@ -226,7 +230,7 @@ void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
 
 }
 
-void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& itemSize,QString& itemLink,float& Progress){
+void PropertiesWidget::ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSize,const QString& itemSpeed,const QString& itemLink){
 
     qDebug() << "from thread slot:" << QThread::currentThreadId();
 
@@ -235,46 +239,30 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const QString& ite
 
     QList matchList = treeWidgetTaskQueue->findItems(itemName,flag,1);
 
-    if(!matchList.size()){
-
-        // Status,Filename,Progress,Size,Speed,DateTime,storagePath
-        QList<QString> newItemInformation{"Downloading",itemName,"null",itemSize,"null","DateTime",QString::fromStdString(DownloadPath)};
-        ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
-
-        treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
-        treeWidgetTaskQueue->setItemDelegateForColumn(ProgressList, progressBar);
-
-        qDebug("topLevelItemCount:%d",treeWidgetTaskQueue->topLevelItemCount());
-    }
-
-    else{
-        QTreeWidgetItem *currentItem = matchList.at(0);
+    QTreeWidgetItem *currentItem = matchList.at(0);
 
         QMetaObject::invokeMethod(this,[&](){
             currentItem->setData(ProgressList, Qt::UserRole, Progress); //数据更新
+            currentItem->setText(SpeedList,itemSpeed);
             StatusChanged(Downloading,currentItem);
 
             if(static_cast<int>(round(Progress))==100){
                 qDebug("%s Download Complete!",itemName.toStdString().c_str());
                 StatusChanged(Finished,currentItem);
-                currentItem->setData(SpeedList, Qt::UserRole, ""); //数据更新
+                // currentItem->setData(SpeedList, Qt::UserRole, ""); //数据更新
+                // currentItem->setData(SpeedList, Qt::UserRole, "—"); //数据更新
             }
 
         });
 
-        qDebug("itemName:%s,Progress:%f",itemName.toStdString().c_str(),Progress);
-    }
+    qDebug("itemName:%s,Progress:%f",itemName.toStdString().c_str(),Progress);
+
 
 }
 
 void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 
-
-
     switch(Status){
-
-        //setText(columnIndex,"String")
-
         case Downloading: {
             listItem->setText(StatusList,"Downloading"); break; 
         }

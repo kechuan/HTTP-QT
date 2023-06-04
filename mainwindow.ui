@@ -88,7 +88,7 @@
               <bool>false</bool>
              </property>
              <attribute name="headerDefaultSectionSize">
-              <number>200</number>
+              <number>220</number>
              </attribute>
              <column>
               <property name="text">
@@ -393,6 +393,12 @@ QPushButton:pressed{
           </item>
           <item>
            <widget class="QLabel" name="label_DownloadSpeedValue">
+            <property name="minimumSize">
+             <size>
+              <width>60</width>
+              <height>0</height>
+             </size>
+            </property>
             <property name="font">
              <font>
               <bold>true</bold>
@@ -400,6 +406,27 @@ QPushButton:pressed{
             </property>
             <property name="text">
              <string>0</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_DownloadSpeedUnitText">
+            <property name="minimumSize">
+             <size>
+              <width>20</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>B/s</string>
             </property>
            </widget>
           </item>

@@ -28,6 +28,7 @@ enum StatusList{
 
 extern Connect Client1;
 extern std::string DownloadPath;
+QList<QString> DownloadSpeedList;
 
 QList<QTreeWidgetItem*> selectedTreeWidgetItems;
 
@@ -37,6 +38,8 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     m_ui(m_ui)
 {
     ui->setupUi(this);
+
+    this->setAcceptDrops(true); //prop控件允许被拖拽事件响应
 
     qDebug()<<"Status created";
 
@@ -59,6 +62,34 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QObject::connect(Continued_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
     QObject::connect(Paused_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
     QObject::connect(Remove_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
+
+    QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemChanged,this,[=]{
+
+        //不知道为什么 但总之它不会监听删除事件
+//        if(treeWidgetTaskQueue->topLevelItemCount());
+//        qDebug("itemChanged!");
+        m_ui->label_DownloadSpeedValue->setText("0"); //default value: 0
+
+        int PropTaskLength = treeWidgetTaskQueue->topLevelItemCount();
+
+        QTreeWidgetItem *currentTask;
+
+        for(int TaskIndex = 0;TaskIndex<PropTaskLength;TaskIndex++){
+            currentTask = treeWidgetTaskQueue->topLevelItem(TaskIndex);
+
+            if(currentTask->text(SpeedList)!="—"){
+                qDebug("itemSpeed:%s",currentTask->text(SpeedList).toStdString().c_str());
+//                DownloadSpeedList.append(currentTask->text(SpeedList));
+            }
+
+        }
+
+//        m_ui->label_DownloadSpeedValue->setText();
+
+
+//        qDebug("label_DownloadSpeedValue:%s",m_ui->label_DownloadSpeedValue->text().toStdString().c_str());
+
+    });
 
 }
 
@@ -220,8 +251,8 @@ void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
 
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
 
-    // Status,Filename,Progress,Size,Speed,DateTime,storagePath
-    QList<QString> newItemInformation{"Pending",Item->text(1),"null",Item->text(2),"null","DateTime",QString::fromStdString(DownloadPath)};
+                                    // Status,  Filename,      Progress,    Size,      Speed,DateTime,     storagePath
+    QList<QString> newItemInformation{"Pending",Item->text(1),"Progress",Item->text(2),"—","DateTime",QString::fromStdString(DownloadPath)};
 
     ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
 
@@ -249,8 +280,6 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const float& Progr
             if(static_cast<int>(round(Progress))==100){
                 qDebug("%s Download Complete!",itemName.toStdString().c_str());
                 StatusChanged(Finished,currentItem);
-                // currentItem->setData(SpeedList, Qt::UserRole, ""); //数据更新
-                // currentItem->setData(SpeedList, Qt::UserRole, "—"); //数据更新
             }
 
         });

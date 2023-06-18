@@ -1,6 +1,7 @@
 #include "connect.h"
 #include "qthread.h"
 
+
 #include <QDebug>
 #include <fstream>
 #include <filesystem> //C++ 17 to solve fstream wchar problem.
@@ -19,6 +20,7 @@ using namespace httplib;
 using string = std::string;
 
 extern std::string DownloadPath;
+extern std::vector<std::string> UploadVector;
 
 
 extern QString FullIP;
@@ -247,16 +249,74 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
 
 }
 
-void Connect::cliFileUpload(QString& QTargetPosition,httplib::MultipartFormDataItems &items){
+
+void Connect::cliFileUpload(QString& QTargetPosition){
     Client cli(FullIP.toStdString(),Port);
-    qDebug("the TargetPosition is:%s",QTargetPosition.toStdString().c_str());
 
     std::string TargetPosition = QTargetPosition.toStdString().c_str();
+    qDebug("the TargetPosition is:%s",TargetPosition.c_str());
+
+    httplib::MultipartFormData FormData;
+    httplib::MultipartFormDataItems items; //->std::vector<httplib::MultipartFormData>
+
+
+    for(auto& uploadFile:UploadVector){
+
+        QFileInfo Uploadinfo(QString::fromStdString(uploadFile));
+        std::ifstream TargetFile;
+
+        TargetFile.open(std::filesystem::u8path(uploadFile),std::ios_base::binary);
+        qDebug("open in binary way");
+
+        if(!TargetFile.is_open()){
+            qDebug("open failed");
+        }
+
+        else{
+            //STL->istreambuf_iterators
+            std::string filecontent((std::istreambuf_iterator<char>(TargetFile)), (std::istreambuf_iterator<char>()));
+
+            FormData.name = "Files";
+            FormData.filename = std::move(Uploadinfo.fileName().toStdString());
+            FormData.content = std::move(filecontent);
+            FormData.content_type = std::move(Uploadinfo.suffix().toStdString());
+
+            TargetFile.close();
+            items.emplace_back(FormData);
+
+        }
+        qDebug("UploadVector Size:%zu",UploadVector.size());
+
+
+    }
+
 
     if (auto ping = cli.Post("/ping")){
         if(ping->status==200){
             qDebug()<<"server ok";
             auto upload = cli.Post("/upload/"+TargetPosition, items);
+        }
+    }
+
+
+    
+    
+
+}
+
+void Connect::cliFileRename(QString& oldItem,QString& newFileName){
+    Client cli(FullIP.toStdString(),Port);
+
+    httplib::Params RenameParams;
+
+    if(auto ping = cli.Post("/ping")){
+        if(ping->status==200){
+            qDebug()<<"server ok";
+
+            RenameParams.emplace("oldItem",oldItem.toStdString());
+            RenameParams.emplace("newName",newFileName.toStdString());
+
+            auto RenameAction = cli.Post("/rename",RenameParams);
         }
     }
 }

@@ -17,12 +17,12 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QLabel" name="AboutName">
+      <widget class="QLabel" name="label_SoftName">
        <property name="enabled">
         <bool>true</bool>
        </property>
        <property name="text">
-        <string>Test Window </string>
+        <string>HTTP-QT</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -32,11 +32,11 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_2">
+    <layout class="QVBoxLayout" name="verticalLayout_revision">
      <item>
-      <widget class="QLabel" name="AboutVersion">
+      <widget class="QLabel" name="label_revision">
        <property name="text">
-        <string>version:-3.2</string>
+        <string>version:-3.2 | Build Time:23.5.29</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -46,16 +46,43 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_3">
+    <layout class="QHBoxLayout" name="horizontalLayout_libusage">
      <item>
-      <widget class="QLabel" name="AboutTime">
+      <widget class="QLabel" name="label_refernceText">
        <property name="text">
-        <string>Build Time:23.5.29</string>
+        <string>所使用的软件库: </string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
        </property>
       </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <widget class="QLabel" name="label_httplib">
+         <property name="text">
+          <string>cpp-httplib</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::PlainText</enum>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_emptyOccupation">
+         <property name="text">
+          <string>cpp-json</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>

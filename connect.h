@@ -5,6 +5,7 @@
 
 #include <QDebug>
 #include <QObject>
+#include <QFileInfo>
 #include "./dependences/extern_lib/httplib.h"
 
 class Connect:public QObject{
@@ -16,9 +17,10 @@ public:
     std::string cliFileSurfing(QString& Postition);
     
     void cliFileDownload(QString& itemName,QString& itemSize,QString& itemLink);
-    void cliFileUpload(QString& TargetPosition,httplib::MultipartFormDataItems &items);
+    void cliFileUpload(QString& TargetPosition);
 
     void cliFileDelete(QList<QString>& TargetPosition);
+    void cliFileRename(QString& oldItem,QString& newFileName);
 
     std::string ReadTheFile(QString &Qpath,std::string &Information);
 

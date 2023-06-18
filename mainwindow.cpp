@@ -5,11 +5,15 @@
 
 #include "./dependences/HTMLFliter.h"
 
+
 #include <QDebug>
 #include <QMessageBox>
+#include <QInputDialog>
 #include <QFileDialog>
 #include <string>
+
 #include <QKeyEvent>
+
 
 #include <vector>
 
@@ -19,12 +23,23 @@
 #include <QPropertyAnimation>
 #include <QParallelAnimationGroup>
 
+
+#include <QDropEvent>
+#include <QDragLeaveEvent>
+
 std::vector<std::string> LinkVector = {};
 std::vector<std::string> PathVector = {};
 std::vector<std::string> NameVector = {};
 std::vector<std::string> SizeVector = {};
 
+std::vector<std::string> UploadVector = {};
 
+enum FileList{
+    iconList,
+    nameList,
+    sizeList,
+    linkList
+};
 
 
 QString FullIP;int Port;
@@ -47,6 +62,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this); //this指向UI自己
     this->setWindowTitle("HTTP-QT"); //标题定义
 
+    this->setAcceptDrops(true);
+
+
     //声明其他ui类
     AboutWindow = new About();
     // About *AboutWindow = new About();
@@ -61,6 +79,9 @@ MainWindow::MainWindow(QWidget *parent)
     DockWidget = new PropertiesWidget(ui->statusShow,ui); //显示在statusShow里
     DockWidget->show();
 
+   //大小调整响应
+//    QObject::connect(this,QResizeEvent::)
+
 
    //第一个值:其默认值本来就是 QWidget *parent = nullptr 即父级 也就是所谓的Mainwindow身上 重新指向nullptr意思就和上方的About()含义一致
    //第二个arg:获取ui信息 谁的? MainWindow的
@@ -70,7 +91,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     QTreeWidget *Filelist = ui->Filelist;
     Filelist->setStyleSheet("QHeaderView::section{background:#A3C99FFF;}"); //???QHeaderView
-//    Filelist->setContextMenuPolicy(Qt::CustomContextMenu);  //默认值 Default->0
     Filelist->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     QLineEdit *DownloadPathInput = ui->DownloadPath;
@@ -194,11 +214,16 @@ MainWindow::MainWindow(QWidget *parent)
         );
     });
 
+
+//    QLabel *label_DownloadSpeedValue = ui->label_DownloadSpeedValue;
+
     QPushButton *pushButton_MaxThreadCount = ui->pushButton_MaxThreadCount;
     QSlider *ThreadsSlider = ui->horizontalSlider_MaxThreadCount;
     QLabel *label_MaxThreadCountValue = ui->label_MaxThreadCountValue;
 
+
     QParallelAnimationGroup *MaxThreadAnimation = new QParallelAnimationGroup(this);
+
 
 
     //初始位置:绝对
@@ -313,8 +338,8 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
 
     qDebug()<<"right triggered";
 
-    QString itemName = listItem->text(1);
-    QString itemSize = listItem->text(2);
+    QString itemName = listItem->text(nameList);
+    QString itemSize = listItem->text(sizeList);
     QMenu *FileList_popmenu = new QMenu;
 
     //general way
@@ -331,6 +356,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
     FileList_popmenu->addAction(Rename);
     FileList_popmenu->addAction(Upload);
 
+    if(ParentPath == rootPath) Refresh->setEnabled(false); //不要在磁盘界面选择刷新
 
     //signal Trigger add.
     QObject::connect(
@@ -338,20 +364,8 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
         &QAction::triggered,
         this,
         [this](){   //捕获this 以引入函数执行主体 this->mainwindow
-                ui->Filelist->clear();
-                qDebug("Surfingpath: %s",SurfingPath.toStdString().c_str());
-                QList<QString> newItemInformation{"-","..","—",ParentPath};
-                ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
-
-                std::string Information = Client1.cliFileSurfing(SurfingPath);
-                HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
-
-                for(int index = 0;index<=SizeVector.size()-1;++index){
-                    QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
-                    QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
-                    ui->Filelist->addTopLevelItem(newItem);
-                }
-            }
+            MainWindow::Refresh();
+        }
     );
 
     QObject::connect(
@@ -369,6 +383,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
         this,
         [this,listItem](){
             MainWindow::Rename(listItem);
+            MainWindow::Refresh();
         }
     );
 
@@ -379,63 +394,9 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
         Upload,
         &QAction::triggered,
         this,
-        [](){
-            qDebug("Upload File.");
-            //说起来多集合的QString 得用官方提供的QStringList来装载
-            //然而内部方法与vector却没什么不同
-
-            QStringList UploadFiles = QFileDialog::getOpenFileNames(
-                nullptr,
-                tr("choose Files to upload"),
-                "D:/All Local Downloads",
-                tr("texts(*.txt *.ini *.log *.md);;images(*.jpg *.jpeg *.png *.bmp);;video files(*.mp4 *.avi *.flv *.mkv);;All files(*.*)")
-            );
-
-            httplib::MultipartFormDataItems items; //->std::vector<httplib::MultipartFormData>
-            httplib::MultipartFormData FormData;
-
-            if(UploadFiles.length()!=0){
-
-                qDebug("UploadFiles length:%zu",UploadFiles.length());
-                for(auto &File:UploadFiles){
-                    QFileInfo info(File);
-
-                    QString Filename = std::move(info.fileName());
-                    QString content_type = std::move(info.suffix());
-
-                    qDebug("Filename:%s,content_type:%s",Filename.toStdString().c_str(),content_type.toStdString().c_str());
-
-                    FormData.name = "Files";
-                    FormData.filename = std::move(Filename.toStdString());
-                    FormData.content_type = std::move(content_type.toStdString());
-
-                    std::string filecontent;
-
-                    std::ifstream TargetFile;
-                    std::string readPath = File.toStdString();
-
-                    TargetFile.open(std::filesystem::u8path(readPath),std::ios_base::binary);
-                    qDebug("open in binary way");
-
-
-                    if(!TargetFile.is_open()){
-                        qDebug("open failed");
-                    }
-
-                    else{
-                        //STL->istreambuf_iterators
-                        std::string filecontent((std::istreambuf_iterator<char>(TargetFile)), (std::istreambuf_iterator<char>()));
-                        FormData.content = std::move(filecontent);
-                        TargetFile.close();
-                        items.emplace_back(FormData);
-                        Client1.cliFileUpload(SurfingPath,items);
-
-                    }
-
-                }
-            }
-
-
+        [this](){
+            MainWindow::Upload();
+            MainWindow::Refresh();
         }
     );
 
@@ -454,12 +415,12 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
 
         if(selectedList.size()>1){
             for(auto &item:selectedList){
-                QString selectedListsName = item->text(1);
-                QString selectedListsSize = item->text(2);
+                QString selectedListsName = item->text(nameList);
+                QString selectedListsSize = item->text(sizeList);
 
 
                 if(selectedListsSize!="—"){
-                    qDebug("you selected the %s,which size is:%s",item->text(1).toStdString().c_str(),item->text(2).toStdString().c_str());
+                    qDebug("you selected the %s,which size is:%s",item->text(nameList).toStdString().c_str(),item->text(sizeList).toStdString().c_str());
                 }
 
                 else{
@@ -532,10 +493,10 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
 //这里的column代表这一行里点击的位置判定(Icon->0/FileName->1/Size->2...) 不过我并没有对column作出什么更改需求
 
-//  QString selectedListsIcon = listItem->text(0);
-    QString selectedListsName = listItem->text(1);
-    QString selectedListsSize = listItem->text(2);
-    QString selectedListsLink = listItem->text(3);
+//  QString selectedListsIcon = listItem->text(iconList);
+    QString selectedListsName = listItem->text(nameList);
+    QString selectedListsSize = listItem->text(sizeList);
+    QString selectedListsLink = listItem->text(linkList);
 
     if(selectedListsSize!="—"){
         QTreeWidget *Filelist = ui->Filelist;
@@ -548,6 +509,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         if(selectedList.size()>1){
 
             QThreadPool DownloadPool;
+
             qDebug("ui->label_MaxThreadCountValue->text():%d",ui->label_MaxThreadCountValue->text().toInt());
             DownloadPool.setMaxThreadCount(ui->label_MaxThreadCountValue->text().toInt()); //额外最多允许3个线程
 
@@ -570,9 +532,9 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
 
                         DownloadWatcher.setFuture(QtConcurrent::map(TempList,[&](QTreeWidgetItem *selectedItem){
-                            QString selectedName = selectedItem->text(1);
-                            QString selectedSize = selectedItem->text(2);
-                            QString selectedLink = selectedItem->text(3);
+                            QString selectedName = selectedItem->text(nameList);
+                            QString selectedSize = selectedItem->text(sizeList);
+                            QString selectedLink = selectedItem->text(linkList);
                             Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
                         }));
 
@@ -587,9 +549,9 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
                         TempList.append(selectedList.at(batch*DownloadPool.maxThreadCount()));
 
                         DownloadWatcher.setFuture(QtConcurrent::map(TempList,[&](QTreeWidgetItem *selectedItem){
-                            QString selectedName = selectedItem->text(1);
-                            QString selectedSize = selectedItem->text(2);
-                            QString selectedLink = selectedItem->text(3);
+                            QString selectedName = selectedItem->text(nameList);
+                            QString selectedSize = selectedItem->text(sizeList);
+                            QString selectedLink = selectedItem->text(linkList);
                             Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
                         }));
 
@@ -612,13 +574,13 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
 
                     for(auto List:TempList){
-                        qDebug("number List:%s",List->text(1).toStdString().c_str());
+                        qDebug("number List:%s",List->text(nameList).toStdString().c_str());
                     }
 
                     insideWatcher.setFuture(QtConcurrent::map(TempList,[&](QTreeWidgetItem *selectedItem){
-                        QString selectedName = selectedItem->text(1);
-                        QString selectedSize = selectedItem->text(2);
-                        QString selectedLink = selectedItem->text(3);
+                        QString selectedName = selectedItem->text(nameList);
+                        QString selectedSize = selectedItem->text(sizeList);
+                        QString selectedLink = selectedItem->text(linkList);
                         Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
                     }));
 
@@ -733,7 +695,25 @@ void MainWindow::Tab_pressed(){
 }
 
 void MainWindow::Rename(QTreeWidgetItem *listItem){
-    qDebug("Ask Server to Rename item:%s",listItem->text(1).toStdString().c_str());
+
+    QString oldItem = listItem->text(linkList);
+
+    QString Renametitle = tr("远程重命名确认");
+    QString RenameContext = "\n将该文件名重命名为";
+    RenameContext.insert(0,listItem->text(nameList)); //当前listItem->Name
+
+    QString newFileName = QInputDialog::getText(this, Renametitle, RenameContext, QLineEdit::Normal, listItem->text(nameList));
+    //这里的最后一个arg为placeholder
+
+    qDebug("Ask Server to Rename item:%s->%s",listItem->text(nameList).toStdString().c_str(),newFileName.toStdString().c_str());
+
+    if(!newFileName.isEmpty()){
+        Client1.cliFileRename(oldItem,newFileName);
+    }
+
+    else{
+        qDebug("Empty Rename Quest Input,Rejected.");
+    }
 }
 
 void MainWindow::Delete(){
@@ -759,9 +739,9 @@ void MainWindow::Delete(){
     QString DeleteFileList = "";
 
     for(auto& List:selectedList){
-        qDebug("Ask for server to Delete item:%s",List->text(1).toStdString().c_str());
-        LinkList.emplaceBack(List->text(3));
-        DeleteFileList.append("\t"+List->text(1)+"\n");
+        qDebug("Ask for server to Delete item:%s",List->text(nameList).toStdString().c_str());
+        LinkList.emplaceBack(List->text(linkList));
+        DeleteFileList.append("\t"+List->text(nameList)+"\n");
     }
 
     RemoteDeletePrompt.setInformativeText(DeleteFileList);
@@ -783,6 +763,69 @@ void MainWindow::Delete(){
     }
 
 }
+
+void MainWindow::Refresh(){
+    ui->Filelist->clear();
+    qDebug("Surfingpath: %s",SurfingPath.toStdString().c_str());
+    QList<QString> newItemInformation{"-","..","—",ParentPath};
+    ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+
+    std::string Information = Client1.cliFileSurfing(SurfingPath);
+
+    HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
+
+    for(int index = 0;index<=SizeVector.size()-1;++index){
+        QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
+        QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
+        ui->Filelist->addTopLevelItem(newItem);
+    }
+
+}
+
+void MainWindow::Upload(){
+    UploadVector.clear();
+    UploadVector.shrink_to_fit();
+
+    qDebug("Upload File.");
+            //说起来多集合的QString 得用官方提供的QStringList来装载
+            //然而内部方法与vector却没什么不同
+
+    QStringList UploadFiles = QFileDialog::getOpenFileNames(
+        nullptr,
+        tr("choose Files to upload"),
+        "D:/All Local Downloads",
+        tr("texts(*.txt *.ini *.log *.md);;images(*.jpg *.jpeg *.png *.bmp);;video files(*.mp4 *.avi *.flv *.mkv);;All files(*.*)")
+    );
+
+    if(UploadFiles.length()!=0){
+    qDebug("UploadFiles length:%zu",UploadFiles.length());
+
+    for(auto &File:UploadFiles){
+        qDebug("Upload Prompt FileLink:%s",File.toStdString().c_str());
+        UploadVector.emplace_back(File.toStdString());
+    }
+
+    QString UploadPath = SurfingPath.split("?path=").at(1);
+    Client1.cliFileUpload(UploadPath); //注意 SurfingPath => http://....?path= 是不能直接用在cliFileUpload的req.params里的
+
+    }
+}
+
+void MainWindow::Upload(QList<QUrl>& DropList){
+    UploadVector.clear();
+    UploadVector.shrink_to_fit();
+
+    for(auto& DropItem:DropList){
+
+        // file:///D:/cpp/app/HTTP-UI/HTTP-QT/connect.h erase -> D:/cpp/app/HTTP-UI/HTTP-QT/connect.h
+        UploadVector.emplace_back(DropItem.toString().toStdString().erase(0,8));
+    }
+
+    QString UploadPath = SurfingPath.split("?path=").at(1);
+    Client1.cliFileUpload(UploadPath); //注意 SurfingPath => http://....?path= 是不能直接用在cliFileUpload的req.params里的
+
+}
+
 
 void MainWindow::NewDir(){
     qDebug("create newDir.");
@@ -819,18 +862,20 @@ void MainWindow::clearStatusList(){
     qDebug("clear your List");
 }
 
+//事件定义区
+
 void MainWindow::closeEvent(QCloseEvent *event){
-    qApp->quit();
-//    QMessageBox closeConfirm;
 
-//    closeConfirm.question(this,tr("Quit"),tr("Are you sure to quit this application?"),QMessageBox::Yes|QMessageBox::No);
+    QMessageBox closeConfirm;
 
-//    int choice = closeConfirm.exec();
+    closeConfirm.question(this,tr("Quit"),tr("Are you sure to quit this application?"),QMessageBox::Yes|QMessageBox::No);
 
-//    switch(choice){
-//        case QMessageBox::Yes: {event->accept();qApp->quit();break;}
-//        case QMessageBox::No: {event->ignore();break;}
-//    }
+    int choice = closeConfirm.exec();
+
+    switch(choice){
+        case QMessageBox::Yes: {qApp->quit();break;}
+        case QMessageBox::No: {event->ignore();break;}
+    }
 
 }
 
@@ -864,4 +909,42 @@ void MainWindow::keyPressEvent(QKeyEvent *event){
     }
 
 }
+
+void MainWindow::dragEnterEvent(QDragEnterEvent *dragEnterEvent){
+
+    if(dragEnterEvent->position() != ui->Filelist->pos()) dragEnterEvent->ignore();
+
+    if(dragEnterEvent->mimeData()->hasUrls()){
+        dragEnterEvent->acceptProposedAction();
+    }
+
+    else{
+        dragEnterEvent->ignore();
+    }
+}
+
+
+void MainWindow::dropEvent(QDropEvent *dropEvent){
+
+    if(dropEvent->position() != ui->Filelist->pos()) dropEvent->ignore();
+
+    if(dropEvent->mimeData()->hasUrls()){
+        QList<QUrl> list = dropEvent->mimeData()->urls();
+
+        //Example File url: file:///D:/cpp/app/HTTP-UI/HTTP-QT/connect.h
+
+        qDebug("dropEvent FileUrl:%s",dropEvent->mimeData()->text().toStdString().c_str());
+
+        Upload(list);
+        Refresh();
+
+    }
+
+    else{
+        dropEvent->ignore();
+    }
+}
+
+
+
 

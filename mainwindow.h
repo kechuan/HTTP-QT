@@ -24,9 +24,21 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+
+    void closeEvent(QCloseEvent *closeEvent);
+//    void resizeEvent(QResizeEvent *resizeEvent);
+
+
+    void dragEnterEvent(QDragEnterEvent *dragEnterEvent);
+    void dropEvent(QDropEvent* dropEvent);
+//    void dragLeaveEvent(QDragLeaveEvent *dragLeaveEvent);
+
+//    void mousePressEvent(QMouseEvent *mousePressEvent);
     void keyPressEvent(QKeyEvent *event);
-    void closeEvent(QCloseEvent *event);
-//    void mousePressEvent(QMouseEvent *event);
+
+
+    void Upload(); //需求FileDialog补充信息
+    void Upload(QList<QUrl>& DropList); //拖拽获取信息
 
 private:
     Ui::MainWindow *ui; //从此Mainwindow下的指代的指针则为ui  MainWindow *ui = new Ui::MainWindow();
@@ -57,8 +69,10 @@ private slots:
     void NewDir();
     void Copy();
     void Cut();
-    // void Upload(); -> get?
-    // void Refresh(); -> cli surfingPath
+
+    void Refresh();
+
+    
     
 
     //Dir Area

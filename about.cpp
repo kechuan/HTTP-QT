@@ -2,6 +2,8 @@
 #include "about.h"
 #include "ui_about.h"
 
+#include <QDesktopServices>
+
 
 About::About(QWidget *parent) :
     QWidget(parent),
@@ -9,6 +11,17 @@ About::About(QWidget *parent) :
 {
     ui->setupUi(this);
     qDebug() << "about created.";
+
+    QLabel *label_httplib = ui->label_httplib;
+
+    label_httplib->setTextFormat(Qt::RichText);
+    label_httplib->setText("<a href='https://github.com/yhirose/cpp-httplib'>cpp-httplib</a>");
+
+    label_httplib->setOpenExternalLinks(true);
+
+    QObject::connect(label_httplib,&QLabel::linkActivated,this,[=](const QString &link){
+        QDesktopServices::openUrl(link);
+    });
 }
 
 About::~About()

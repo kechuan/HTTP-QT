@@ -4,15 +4,14 @@
 #include <regex>
 #include <string>
 #include <QDebug>
-// #include "testdefine.h"
 
 inline std::regex DiskReg(R"(\w:)");
-inline std::regex HTMLLinkReg(R"(<\s*a\s+[^>]*href\s*=\s*"([^/view/]+[^"]*))", std::regex::icase); //target group1
-inline std::regex HTMLDiskReg(R"((path=)+(.*))", std::regex::icase);                               //target group1
+inline std::regex HTMLLinkReg(R"(<\s*a\s+[^>]*href\s*=\s*"([^/view/]+[^"]*))", std::regex::icase);                      //target group1
+inline std::regex HTMLDiskReg(R"((path=)+(.*))", std::regex::icase);                                                    //target group1
 inline std::regex HTMLNameReg(R"(<\s*div\s+[^>]*class\s*=\"(dirname|filename)\">+([^<]*))", std::regex::icase);       //target group2
 inline std::regex HTMLSizeReg(R"(<\s*div\s*+[^>]*class\s*=\"filesize\">+([^<]*))", std::regex::icase);                //target group1
 
-inline std::regex MenuContentMatch(R"!!(<ul>+(.*?)+</ul>)!!");                                     //*target group0
+inline std::regex MenuContentMatch(R"!!(<ul>+(.*?)+</ul>)!!");                                                      //target group0
 inline std::regex list(R"(<div\s*id=\"list\">)");
 
 inline std::smatch matches;
@@ -51,8 +50,8 @@ inline std::string HTMLFliter(std::string &Information,std::vector<std::string> 
 inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, std::vector<std::string> &NameVector){
 
     //reset all content
-    LinkVector.clear();
-    NameVector.clear();
+    LinkVector.clear(); LinkVector.shrink_to_fit();
+    NameVector.clear(); NameVector.shrink_to_fit();
 
     copy_template(Information,HTMLLinkReg,1,LinkVector);
 
@@ -70,10 +69,10 @@ inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkV
 inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, std::vector<std::string> &PathVector, std::vector<std::string> &NameVector, std::vector<std::string> &SizeVector){
 
     //reset all content
-    LinkVector.clear();
-    PathVector.clear();
-    NameVector.clear();
-    SizeVector.clear();
+    LinkVector.clear(); LinkVector.shrink_to_fit();
+    PathVector.clear(); PathVector.shrink_to_fit();
+    NameVector.clear(); NameVector.shrink_to_fit();
+    SizeVector.clear(); SizeVector.shrink_to_fit();
 
     //Fliter real Information.
     std::string FilteredInformation = std::move(HTMLFliter(Information,PathVector));

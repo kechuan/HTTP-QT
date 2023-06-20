@@ -96,15 +96,16 @@ MainWindow::MainWindow(QWidget *parent)
     QLineEdit *DownloadPathInput = ui->DownloadPath;
     QPushButton *Button_DownloadSurfingPath = ui->DownloadSurfingPath;
 
-    std::string FullPath = std::filesystem::current_path().string();
-    FullPath.insert(0,"Default Path:");
-    FullPath.append("\\downloads");
+    std::string PlaceHolderText = std::filesystem::current_path().string(); //get Default Link
 
-    DownloadPathInput->setPlaceholderText(QString::fromStdString(std::move(FullPath)));
+    //Declaration
+    PlaceHolderText.insert(0,"Default Path:");
+    PlaceHolderText.append("\\downloads");
+
+    DownloadPathInput->setPlaceholderText(QString::fromStdString(std::move(PlaceHolderText)));
 
     DownloadPathInput->setVisible(false);
     Button_DownloadSurfingPath->setVisible(false);
-
 
     QWidget *statusShow = ui->statusShow;
     statusShow->setVisible(false);
@@ -880,6 +881,15 @@ void MainWindow::closeEvent(QCloseEvent *event){
 }
 
 //快捷键定义区
+
+
+void MainWindow::resizeEvent(QResizeEvent *resizeEvent){
+
+    qDebug("Filelist Height:%d",this->ui->Filelist->geometry().size().height());
+    qDebug("Filelist Width:%d",this->ui->Filelist->geometry().size().width());
+
+    DockWidget->setGeometry(0,0,this->ui->Filelist->geometry().size().width(),this->ui->Filelist->geometry().size().height()*0.9);
+}
 
 //keyPressEvent 事件 不同于 信号与槽的高度封装 事件通常需要手动去配置 但同时自由度也比事件与槽高的多
 void MainWindow::keyPressEvent(QKeyEvent *event){

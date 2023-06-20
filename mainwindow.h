@@ -26,7 +26,7 @@ public:
     ~MainWindow();
 
     void closeEvent(QCloseEvent *closeEvent);
-//    void resizeEvent(QResizeEvent *resizeEvent);
+    void resizeEvent(QResizeEvent *resizeEvent);
 
 
     void dragEnterEvent(QDragEnterEvent *dragEnterEvent);

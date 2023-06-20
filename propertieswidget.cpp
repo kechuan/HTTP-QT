@@ -41,6 +41,9 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
 
     this->setAcceptDrops(true); //prop控件允许被拖拽事件响应
 
+
+    ui->frame_TaskQueue->move(QPoint(0,0));
+
     qDebug()<<"Status created";
 
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
@@ -392,6 +395,9 @@ void PropertiesWidget::keyPressEvent(QKeyEvent *event){
                 break;
             }
         }
+}
 
-
+void PropertiesWidget::resizeEvent(QResizeEvent *resizeEvent){
+    qDebug("frame_TaskQueue Height:%d",this->ui->frame_TaskQueue->geometry().size().height());
+    qDebug("frame_TaskQueue Width:%d",this->ui->frame_TaskQueue->geometry().size().width());
 }

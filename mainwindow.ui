@@ -65,7 +65,10 @@
          </layout>
         </item>
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_4">
+         <layout class="QVBoxLayout" name="verticalLayout_FileList">
+          <property name="spacing">
+           <number>0</number>
+          </property>
           <item>
            <widget class="QSplitter" name="PropTools">
             <property name="lineWidth">

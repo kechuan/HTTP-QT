@@ -18,6 +18,7 @@ public:
     ~PropertiesWidget();
 
     void keyPressEvent(QKeyEvent *event);
+    void resizeEvent(QResizeEvent *resizeEvent);
 
     void deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetItems);
 

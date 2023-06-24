@@ -2,12 +2,12 @@
 #define FILELIST_H
 
 #include <QTreeWidget>
-#include <QObject>
-#include <QWidget>
+#include <QList>
+#include <QUrl>
 
-#include "ui_mainwindow.h"
+//#include "ui_mainwindow.h"
 
-class FileList:QTreeWidget{
+class FileList:public QTreeWidget{
     Q_OBJECT
 public:
     explicit FileList(QWidget *parent);
@@ -19,10 +19,9 @@ public:
     void dragMoveEvent(QDragMoveEvent *dragMoveEvent);
     void resizeEvent(QResizeEvent *resizeEvent);
 
-
-private:
-    Ui::MainWindow *m_ui; //从此Mainwindow下的指代的指针则为ui  MainWindow *ui = new Ui::MainWindow();
-    QTreeWidget *FileListWidget;
+signals:
+    void Upload(QList<QUrl> &Droplist);
+    // void Refresh();
 
 };
 

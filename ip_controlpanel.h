@@ -22,9 +22,6 @@ public:
 
     void keyPressEvent(QKeyEvent *event); //keyboard Event
 
-    
-    
-
 private:
     Ui::IP_controlPanel *ui;
     Ui::MainWindow *m_ui;
@@ -36,9 +33,6 @@ signals:
     void connetPressed();
 
 };
-
-
-
 
 
 #endif // IP_CONTROLPANEL_H

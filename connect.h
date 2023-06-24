@@ -6,7 +6,7 @@
 #include <QDebug>
 #include <QObject>
 #include <QFileInfo>
-#include "./dependences/extern_lib/httplib.h"
+
 
 class Connect:public QObject{
     Q_OBJECT

@@ -1,9 +1,12 @@
 #include "ip_controlpanel.h"
 #include <QKeyEvent>
+
 #include "ui_ip_controlpanel.h"
 
-#include "connect.h"
 #include "./dependences/HTMLFliter.h"
+
+#include "connect.h"
+#include "FileList.h"
 
 extern QString FullIP;
 extern int Port;
@@ -16,6 +19,7 @@ extern std::vector<std::string> PathVector;
 extern std::vector<std::string> NameVector;
 extern std::vector<std::string> SizeVector;
 
+extern FileList *SurfingFile;
 extern Connect Client1; //共同使用Client1的数据
 
 IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
@@ -49,6 +53,8 @@ IP_controlPanel::~IP_controlPanel()
 void IP_controlPanel::action_pressed(){
    qDebug() << "action IP cotrolPanel Trigger";
 
+
+
    QTextBrowser *log_view = m_ui->textBrowser_log;
    QPushButton *button = (QPushButton*)sender();
    QString buttonName = button->text();
@@ -66,14 +72,13 @@ void IP_controlPanel::action_pressed(){
                 std::string Information = Client1.cliFileSurfing();
                 HTMLExtract(Information,LinkVector,NameVector);
 
-                m_ui->Filelist->clear();
+                SurfingFile->clear();
                 emit connetPressed(); //触发信号
-
 
                 for(int index = 0;index<=NameVector.size()-1;index++){
                     QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
                     QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
-                    m_ui->Filelist->addTopLevelItem(newItem);
+                    SurfingFile->addTopLevelItem(newItem);
                 }
 
                 ui->pushButton_Connect->setEnabled(false);
@@ -98,9 +103,9 @@ void IP_controlPanel::action_pressed(){
 
             //这里应该放一下http库里的强制终止任何现在的行为 下载/上传 以及请求网页的操作 等等等等
 
-            m_ui->Filelist->clear();
+            SurfingFile->clear();
             QList<QString> newItemInformation{"To start","please config","setting->IP control Panel",""};
-            m_ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+            SurfingFile->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
 
         }

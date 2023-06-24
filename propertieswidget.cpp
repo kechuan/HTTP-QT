@@ -38,15 +38,11 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     m_ui(m_ui)
 {
     ui->setupUi(this);
-
     this->setAcceptDrops(true); //prop控件允许被拖拽事件响应
 
-
-    ui->frame_TaskQueue->move(QPoint(0,0));
-
-    qDebug()<<"Status created";
-
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
+    treeWidgetTaskQueue->setStyleSheet("QHeaderView::section{background:#B1EA14;}");
+
     treeWidgetTaskQueue->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     //疑似自适应长度
@@ -69,8 +65,6 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemChanged,this,[=]{
 
         //不知道为什么 但总之它不会监听删除事件
-//        if(treeWidgetTaskQueue->topLevelItemCount());
-//        qDebug("itemChanged!");
         m_ui->label_DownloadSpeedValue->setText("0"); //default value: 0
 
         int PropTaskLength = treeWidgetTaskQueue->topLevelItemCount();
@@ -87,12 +81,9 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
 
         }
 
-//        m_ui->label_DownloadSpeedValue->setText();
-
-
-//        qDebug("label_DownloadSpeedValue:%s",m_ui->label_DownloadSpeedValue->text().toStdString().c_str());
-
     });
+
+    qDebug()<<"Status created";
 
 }
 
@@ -398,6 +389,8 @@ void PropertiesWidget::keyPressEvent(QKeyEvent *event){
 }
 
 void PropertiesWidget::resizeEvent(QResizeEvent *resizeEvent){
+
+
     qDebug("frame_TaskQueue Height:%d",this->ui->frame_TaskQueue->geometry().size().height());
     qDebug("frame_TaskQueue Width:%d",this->ui->frame_TaskQueue->geometry().size().width());
 }

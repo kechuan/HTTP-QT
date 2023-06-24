@@ -1,31 +1,31 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 
-#include "connect.h"
-
 #include "./dependences/HTMLFliter.h"
 
+#include "connect.h"
+
+#include <string>
+#include <vector>
 
 #include <QDebug>
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QFileDialog>
-#include <string>
-
 #include <QKeyEvent>
-
-
-#include <vector>
-
 #include <QtConcurrent/QtConcurrent>
-
 #include <QGraphicsOpacityEffect>
 #include <QPropertyAnimation>
 #include <QParallelAnimationGroup>
-
-
 #include <QDropEvent>
 #include <QDragLeaveEvent>
+
+enum FileList_itemNumber{
+    iconList,
+    nameList,
+    sizeList,
+    linkList
+};
 
 std::vector<std::string> LinkVector = {};
 std::vector<std::string> PathVector = {};
@@ -34,25 +34,21 @@ std::vector<std::string> SizeVector = {};
 
 std::vector<std::string> UploadVector = {};
 
-enum FileList{
-    iconList,
-    nameList,
-    sizeList,
-    linkList
-};
-
-
 QString FullIP;int Port;
 
 QString rootPath = "/file";
 QString SurfingPath;
 QString ParentPath;
-
 std::string DownloadPath = "./downloads/";
 
 bool m_status = false;
 
+short SplitterRecord;
+
+//全局对象 创立
 Connect Client1;
+FileList *SurfingFile;
+
 QList<QTreeWidgetItem*> selectedList;
 
 MainWindow::MainWindow(QWidget *parent)
@@ -61,9 +57,6 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this); //this指向UI自己
     this->setWindowTitle("HTTP-QT"); //标题定义
-
-    this->setAcceptDrops(true);
-
 
     //声明其他ui类
     AboutWindow = new About();
@@ -75,13 +68,47 @@ MainWindow::MainWindow(QWidget *parent)
     //延迟弹出 以便弹窗后置在主程序
     QTimer::singleShot(800,this,[&](){qDebug()<<"IP_show ID:"<<QThread::currentThreadId();IP_controlPanelWindow->show();});
 
+    SurfingFile = new FileList(ui->widget_FileList); //构造阶段时 已经为SurfingFile 分配好内存地址
+
+    QSplitter *FileShare_Splitter = ui->PropTools;
+
+    //inital FileList/TaskQueue
+
+    qDebug("FileShare_Splitter width:%d",FileShare_Splitter->size().width());
+    qDebug("FileShare_Splitter Height:%d",FileShare_Splitter->size().height());
+
+    ui->widget_FileList->setGeometry(0,0,908,517);
+    SurfingFile->setGeometry(0,0,908,517);
 
     DockWidget = new PropertiesWidget(ui->statusShow,ui); //显示在statusShow里
     DockWidget->show();
 
-   //大小调整响应
-//    QObject::connect(this,QResizeEvent::)
 
+
+    QObject::connect(FileShare_Splitter,&QSplitter::splitterMoved,this,[=](){
+        ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
+        SurfingFile->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
+
+//        ui->statusShow->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
+        DockWidget->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
+
+        qDebug("Prop 1 Height:%d",FileShare_Splitter->widget(0)->size().height());
+        qDebug("Prop 1 Width:%d",FileShare_Splitter->widget(0)->size().width());
+
+        qDebug("SurfingFile Height:%d",SurfingFile->size().height());
+        qDebug("SurfingFile Width:%d",SurfingFile->size().width());
+
+        qDebug("Prop 2 Height:%d",FileShare_Splitter->widget(1)->size().height());
+        qDebug("Prop 2 Width:%d",FileShare_Splitter->widget(1)->size().width());
+
+        SplitterRecord = FileShare_Splitter->widget(1)->size().height();
+
+    });
+
+    QObject::connect(SurfingFile,&FileList::Upload,this,[this](QList<QUrl> DropList){
+        Upload(DropList);
+        Refresh();
+    });
 
    //第一个值:其默认值本来就是 QWidget *parent = nullptr 即父级 也就是所谓的Mainwindow身上 重新指向nullptr意思就和上方的About()含义一致
    //第二个arg:获取ui信息 谁的? MainWindow的
@@ -89,8 +116,9 @@ MainWindow::MainWindow(QWidget *parent)
     QTabWidget *tabWidget_contentShow = ui->tabWidget_contentShow;
     tabWidget_contentShow->setMovable(true);
 
-    QTreeWidget *Filelist = ui->Filelist;
-    Filelist->setStyleSheet("QHeaderView::section{background:#A3C99FFF;}"); //???QHeaderView
+    QTreeWidget *Filelist = SurfingFile;
+
+    Filelist->setStyleSheet("QHeaderView::section{background:#A3C99FFF;}");
     Filelist->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     QLineEdit *DownloadPathInput = ui->DownloadPath;
@@ -191,7 +219,39 @@ MainWindow::MainWindow(QWidget *parent)
    //思路:先检测对treewidget的点击 然后检测被点击的item是左键还是右键 右键时执行qMenu
 
     QObject::connect(Filelist,&QTreeWidget::itemPressed,this,&MainWindow::FileList_Menu); //item按下判断触发
-    QObject::connect(TaskQueue,&QPushButton::clicked,this,[&](){showStatus(m_status);}); //item按下判断触发
+    QObject::connect(TaskQueue,&QPushButton::clicked,this,[=](){
+        showStatus(m_status);
+
+
+        //disable下
+        if(!ui->statusShow->isEnabled()){
+            ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->width(),FileShare_Splitter->height());
+            SurfingFile->setGeometry(0,0,FileShare_Splitter->width(),FileShare_Splitter->height());
+
+
+        }
+
+        else{
+            //DOM更新
+
+
+
+            qDebug("Prop2.1 Height:%d", FileShare_Splitter->widget(1)->size().height());
+            qDebug("Prop2.2 Height:%d", DockWidget->height());
+            qDebug("Prop2.3 Height:%d", ui->statusShow->height());
+
+//            qDebug("Prop2.4 Height:%d", FileShare_Splitter->pos().y());
+
+            SurfingFile->setGeometry(0,0,FileShare_Splitter->width(),FileShare_Splitter->widget(0)->size().height()-SplitterRecord);
+
+
+        }
+
+
+
+
+
+    }); //item按下判断触发
 
     QObject::connect(ui->tabWidget_contentShow,&QTabWidget::tabBarClicked,this,&MainWindow::LostSelection);
 
@@ -411,7 +471,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
 
         //在弹出之前 先过一个纯File判断
 
-        QTreeWidget *Filelist = ui->Filelist;
+        QTreeWidget *Filelist = SurfingFile;
         selectedList = Filelist->selectedItems();
 
         if(selectedList.size()>1){
@@ -483,7 +543,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
 
     }
 
-     FileList_popmenu->move(ui->Filelist->cursor().pos());    //菜单显示在鼠标点击的位置
+     FileList_popmenu->move(SurfingFile->cursor().pos());    //菜单显示在鼠标点击的位置
      FileList_popmenu->show();
 
      return true;
@@ -500,7 +560,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
     QString selectedListsLink = listItem->text(linkList);
 
     if(selectedListsSize!="—"){
-        QTreeWidget *Filelist = ui->Filelist;
+        QTreeWidget *Filelist = SurfingFile;
         selectedList = Filelist->selectedItems();
 
         QEventLoop DownloadLoop;
@@ -631,10 +691,8 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
         // qDebug("%s",Information.c_str());
 
-
-
         //Filelist update part.
-        ui->Filelist->clear();
+        SurfingFile->clear();
 
         if(selectedListsName==".."&&selectedListsLink==rootPath){
            qDebug("redirect to the disk select.");
@@ -645,7 +703,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
            for(int index = 0;index<=NameVector.size()-1;++index){
                QList<QString> DiskInformation{"-",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
                QTreeWidgetItem *newItem = new QTreeWidgetItem(DiskInformation);
-               ui->Filelist->addTopLevelItem(newItem);
+               SurfingFile->addTopLevelItem(newItem);
             }
 
         }
@@ -655,7 +713,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         else{
 
             QList<QString> newItemInformation{"-","..","—",ParentPath};
-            ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+            SurfingFile->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
             if(!NameVector.size()){
                 qDebug("empty File Open");
@@ -665,7 +723,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
                 for(int index = 0;index<=NameVector.size()-1;++index){
                     QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
                     QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
-                    ui->Filelist->addTopLevelItem(newItem);
+                    SurfingFile->addTopLevelItem(newItem);
                 }
             }
 
@@ -720,7 +778,7 @@ void MainWindow::Rename(QTreeWidgetItem *listItem){
 void MainWindow::Delete(){
     QList<QString> LinkList;
 
-    selectedList = ui->Filelist->selectedItems();
+    selectedList = SurfingFile->selectedItems();
 
     QMessageBox RemoteDeletePrompt;
 
@@ -766,10 +824,10 @@ void MainWindow::Delete(){
 }
 
 void MainWindow::Refresh(){
-    ui->Filelist->clear();
+    SurfingFile->clear();
     qDebug("Surfingpath: %s",SurfingPath.toStdString().c_str());
     QList<QString> newItemInformation{"-","..","—",ParentPath};
-    ui->Filelist->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+    SurfingFile->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
     std::string Information = Client1.cliFileSurfing(SurfingPath);
 
@@ -778,7 +836,7 @@ void MainWindow::Refresh(){
     for(int index = 0;index<=SizeVector.size()-1;++index){
         QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
         QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
-        ui->Filelist->addTopLevelItem(newItem);
+        SurfingFile->addTopLevelItem(newItem);
     }
 
 }
@@ -841,7 +899,7 @@ void MainWindow::Cut(){
 }
 
 void MainWindow::LostSelection(int column){
-    ui->Filelist->clearSelection();
+    SurfingFile->clearSelection();
 }
 
 void MainWindow::showStatus(bool &m_status){
@@ -885,19 +943,32 @@ void MainWindow::closeEvent(QCloseEvent *event){
 
 void MainWindow::resizeEvent(QResizeEvent *resizeEvent){
 
-    qDebug("Filelist Height:%d",this->ui->Filelist->geometry().size().height());
-    qDebug("Filelist Width:%d",this->ui->Filelist->geometry().size().width());
+    QSplitter *FileShare_Splitter = ui->PropTools;
 
-    DockWidget->setGeometry(0,0,this->ui->Filelist->geometry().size().width(),this->ui->Filelist->geometry().size().height()*0.9);
+    qDebug("Prop 1 Height:%d",FileShare_Splitter->widget(0)->size().height());
+    qDebug("Prop 1 Width:%d",FileShare_Splitter->widget(0)->size().width());
+
+    qDebug("Prop 2 Height:%d",FileShare_Splitter->widget(1)->size().height());
+    qDebug("Prop 2 Width:%d",FileShare_Splitter->widget(1)->size().width());
+
+    ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
+
+    SurfingFile->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
+
+
+    DockWidget->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
+    //生效 即在mainWindow下 允许控制 SurfingFile
+
+
 }
 
 //keyPressEvent 事件 不同于 信号与槽的高度封装 事件通常需要手动去配置 但同时自由度也比事件与槽高的多
 void MainWindow::keyPressEvent(QKeyEvent *event){
-    QList<QTreeWidgetItem*> selectedTreeWidgetItems = ui->Filelist->selectedItems();
+    QList<QTreeWidgetItem*> selectedTreeWidgetItems = SurfingFile->selectedItems();
 
     switch(event->key()){
         case Qt::Key_Return: {
-                emit ui->Filelist->itemDoubleClicked(selectedTreeWidgetItems.at(0), 0); //因为判断方式已经变更成selectedTreeWidgetItems了 因此简化掉for循环
+                emit SurfingFile->itemDoubleClicked(selectedTreeWidgetItems.at(0), 0); //因为判断方式已经变更成selectedTreeWidgetItems了 因此简化掉for循环
             break;
         }
 
@@ -908,8 +979,8 @@ void MainWindow::keyPressEvent(QKeyEvent *event){
 
         case Qt::Key_Backspace:{
             if(LinkVector.size()!=0){
-                QTreeWidgetItem *UpperFolder = ui->Filelist->topLevelItem(0);
-                emit ui->Filelist->itemDoubleClicked(UpperFolder, 0); //退格->表示双击上层
+                QTreeWidgetItem *UpperFolder = SurfingFile->topLevelItem(0);
+                emit SurfingFile->itemDoubleClicked(UpperFolder, 0); //退格->表示双击上层
                 break;
             }
             
@@ -919,42 +990,5 @@ void MainWindow::keyPressEvent(QKeyEvent *event){
     }
 
 }
-
-void MainWindow::dragEnterEvent(QDragEnterEvent *dragEnterEvent){
-
-    if(dragEnterEvent->position() != ui->Filelist->pos()) dragEnterEvent->ignore();
-
-    if(dragEnterEvent->mimeData()->hasUrls()){
-        dragEnterEvent->acceptProposedAction();
-    }
-
-    else{
-        dragEnterEvent->ignore();
-    }
-}
-
-
-void MainWindow::dropEvent(QDropEvent *dropEvent){
-
-    if(dropEvent->position() != ui->Filelist->pos()) dropEvent->ignore();
-
-    if(dropEvent->mimeData()->hasUrls()){
-        QList<QUrl> list = dropEvent->mimeData()->urls();
-
-        //Example File url: file:///D:/cpp/app/HTTP-UI/HTTP-QT/connect.h
-
-        qDebug("dropEvent FileUrl:%s",dropEvent->mimeData()->text().toStdString().c_str());
-
-        Upload(list);
-        Refresh();
-
-    }
-
-    else{
-        dropEvent->ignore();
-    }
-}
-
-
 
 

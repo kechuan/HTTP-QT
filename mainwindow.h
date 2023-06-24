@@ -8,6 +8,7 @@
 #include "ip_controlpanel.h" //sub .h include done.
 #include "propertieswidget.h"
 
+#include "FileList.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { 
@@ -15,7 +16,7 @@ namespace Ui {
 }
 QT_END_NAMESPACE
 
-
+extern FileList *SurfingFile;
 
 class MainWindow : public QMainWindow
 {
@@ -29,8 +30,8 @@ public:
     void resizeEvent(QResizeEvent *resizeEvent);
 
 
-    void dragEnterEvent(QDragEnterEvent *dragEnterEvent);
-    void dropEvent(QDropEvent* dropEvent);
+    // void dragEnterEvent(QDragEnterEvent *dragEnterEvent);
+    // void dropEvent(QDropEvent* dropEvent);
 //    void dragLeaveEvent(QDragLeaveEvent *dragLeaveEvent);
 
 //    void mousePressEvent(QMouseEvent *mousePressEvent);
@@ -47,7 +48,6 @@ private:
     PropertiesWidget *DockWidget;
 
     QThread *thread; // 定义一个 QThread 的指针
-
 
 
 private slots:

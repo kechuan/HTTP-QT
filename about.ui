@@ -36,7 +36,7 @@
      <item>
       <widget class="QLabel" name="label_revision">
        <property name="text">
-        <string>version:-3.3 | Build Time:23.6.21</string>
+        <string>version:-3.4a | Build Time:23.6.23 | Author:kechuan</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>

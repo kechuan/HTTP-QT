@@ -6,23 +6,22 @@
 #include <QMimeData>
 #include <QWidget>
 
-//FileList::FileList(QTreeWidget *ParentWidget):QTreeWidget(ParentWidget){
 FileList::FileList(QWidget *ParentWidget):QTreeWidget(ParentWidget){
-    QList<QString> newItemInformation{"-","..","—","testForFileList"};
 
-    this->setHeaderItem(new QTreeWidgetItem(newItemInformation));
-    this->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
+
+    QList<QString> InitalHeader{"Icon","Filename","Size"};
+    this->setHeaderItem(new QTreeWidgetItem(InitalHeader));
+
+    this->addTopLevelItem(new QTreeWidgetItem({"To start","please config","setting->IP control Panel"}));
+    this->addTopLevelItem(new QTreeWidgetItem({"Change Path","please config","setting->DownloadPath Setting"}));
+    this->addTopLevelItem(new QTreeWidgetItem({"Change Threads","please Drag","MaxThread"}));
+
+    this->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
+
+//    this->setGeometry(0,0,900,450);
+
     this->setAcceptDrops(true);
-
-
-
-    this->setSizePolicy(QSizePolicy::Preferred,QSizePolicy::Preferred);
-
-//    this->setMinimumSize(650,350);
-    this->setMaximumSize(16777215,16777215);
-    this->setGeometry(32,22,650,350);
-
-//    this->setDragEnabled(true);
+    this->setDragEnabled(true); //控件拖拽功能开启
     qDebug("FileList created");
 }
 
@@ -47,14 +46,28 @@ void FileList::dragEnterEvent(QDragEnterEvent *dragEnterEvent){
 
 void FileList::dropEvent(QDropEvent *dropEvent){
     if(dropEvent->mimeData()->hasUrls()){
-        QList<QUrl> list = dropEvent->mimeData()->urls();//获取数据并保存到链表中
-            for(int i = 0;i<list.length();i++){
-                qDebug() << list[i].toLocalFile();
-            }
-        }
+        QList<QUrl> Droplist = dropEvent->mimeData()->urls();
+
+        //Example File url: file:///D:/cpp/app/HTTP-UI/HTTP-QT/connect.h
+        qDebug("dropEvent FileUrl:%s",dropEvent->mimeData()->text().toStdString().c_str());
+
+        emit Upload(Droplist);
+
+    }
+
+    else{
+        dropEvent->ignore();
+    }
+
 }
 
 void FileList::resizeEvent(QResizeEvent *resizeEvent){
-//    this->setMinimumSize(resizeEvent->size());
-    QWidget::resizeEvent(resizeEvent);
+
+    //DOM更新
+    this->setStyleSheet("QHeaderView::section{background:#A3C99FFF;}");
+
+    qDebug("frame_FileList Height:%d",this->geometry().size().height());
+    qDebug("frame_FileList Width:%d",this->geometry().size().width());
+
+
 }

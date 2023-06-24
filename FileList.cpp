@@ -1,24 +1,32 @@
 #include "FileList.h"
 
+
 #include <QDebug>
 #include <QDropEvent>
 #include <QDragLeaveEvent>
 #include <QMimeData>
 #include <QWidget>
+#include <QHeaderView>
 
 FileList::FileList(QWidget *ParentWidget):QTreeWidget(ParentWidget){
+
+    this->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+    this->header()->setSectionResizeMode(0,QHeaderView::Fixed);
+    this->setColumnWidth(0,80);
+
+
 
 
     QList<QString> InitalHeader{"Icon","Filename","Size"};
     this->setHeaderItem(new QTreeWidgetItem(InitalHeader));
+
 
     this->addTopLevelItem(new QTreeWidgetItem({"To start","please config","setting->IP control Panel"}));
     this->addTopLevelItem(new QTreeWidgetItem({"Change Path","please config","setting->DownloadPath Setting"}));
     this->addTopLevelItem(new QTreeWidgetItem({"Change Threads","please Drag","MaxThread"}));
 
     this->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
-
-//    this->setGeometry(0,0,900,450);
 
     this->setAcceptDrops(true);
     this->setDragEnabled(true); //控件拖拽功能开启

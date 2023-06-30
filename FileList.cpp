@@ -1,12 +1,16 @@
 #include "FileList.h"
 
-
 #include <QDebug>
+#include <QDrag>
 #include <QDropEvent>
 #include <QDragLeaveEvent>
 #include <QMimeData>
 #include <QWidget>
 #include <QHeaderView>
+
+extern QList<QTreeWidgetItem*> selectedFileList;
+
+QPoint dragStartPosition;
 
 FileList::FileList(QWidget *ParentWidget):QTreeWidget(ParentWidget){
 
@@ -14,9 +18,6 @@ FileList::FileList(QWidget *ParentWidget):QTreeWidget(ParentWidget){
 
     this->header()->setSectionResizeMode(0,QHeaderView::Fixed);
     this->setColumnWidth(0,80);
-
-
-
 
     QList<QString> InitalHeader{"Icon","Filename","Size"};
     this->setHeaderItem(new QTreeWidgetItem(InitalHeader));
@@ -30,11 +31,44 @@ FileList::FileList(QWidget *ParentWidget):QTreeWidget(ParentWidget){
 
     this->setAcceptDrops(true);
     this->setDragEnabled(true); //控件拖拽功能开启
+    this->setDropIndicatorShown(true); //拖拽到这里时 鼠标指针变为可拖拽指示
+
     qDebug("FileList created");
 }
 
 FileList::~FileList(){
     qDebug("FileList deleted");
+}
+
+//void FileList::mousePressEvent(QMouseEvent *mousePressEvent){
+//    dragStartPosition = mousePressEvent->pos();
+
+//    if (!(mousePressEvent->buttons() & Qt::LeftButton)) return; //非左键屏蔽
+//    if ((mousePressEvent->pos() - dragStartPosition).manhattanLength() < qApp->startDragDistance()){
+
+//    } //滑动距离屏蔽 转变为正常单击
+//}
+
+void FileList::mouseMoveEvent(QMouseEvent *mouseMoveEvent){
+
+    selectedFileList = this->selectedItems();
+
+    QDrag *drag = new QDrag(this);
+    QMimeData *mimeData = new QMimeData;
+
+    mimeData->setData("application/x-qwidget",QByteArray::number((quintptr)this)); //将this指针转化为quintptr 挂上x-qwidget标签
+
+    drag->setMimeData(mimeData);
+    drag->setPixmap(QPixmap("./images/Icon.ico"));
+
+    //热点基本上定义了拖动操作正在进行时拖动的像素图应位于的位置(固定)
+    //    drag->setHotSpot(mouseMoveEvent->pos());
+
+    drag->exec(Qt::CopyAction | Qt::MoveAction, Qt::CopyAction);
+
+    // if button is dropped out of panel (e.g. on desktop)
+    // it is not deleted automatically by Qt
+
 }
 
 void FileList::dragMoveEvent(QDragMoveEvent *dragMoveEvent){
@@ -73,6 +107,12 @@ void FileList::resizeEvent(QResizeEvent *resizeEvent){
 
     //DOM更新
     this->setStyleSheet("QHeaderView::section{background:#A3C99FFF;}");
+
+
+    //强制处理CSS样式
+    //this->style()->unpolish(this);
+    //this->style()->polish(this);
+    //this->update();
 
     qDebug("frame_FileList Height:%d",this->geometry().size().height());
     qDebug("frame_FileList Width:%d",this->geometry().size().width());

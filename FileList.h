@@ -19,9 +19,14 @@ public:
     void dragMoveEvent(QDragMoveEvent *dragMoveEvent);
     void resizeEvent(QResizeEvent *resizeEvent);
 
+//    void mousePressEvent(QMouseEvent *mousePressEvent);
+    void mouseMoveEvent(QMouseEvent *mouseMoveEvent);
+
+
 signals:
     void Upload(QList<QUrl> &Droplist);
-    // void Refresh();
+
+
 
 };
 

@@ -18,7 +18,11 @@ public:
     ~PropertiesWidget();
 
     void keyPressEvent(QKeyEvent *event);
-    void resizeEvent(QResizeEvent *resizeEvent);
+//    void resizeEvent(QResizeEvent *resizeEvent);
+
+    void dragEnterEvent(QDragEnterEvent *dragEnterEvent);
+    void dropEvent(QDropEvent* dropEvent);
+    void dragMoveEvent(QDragMoveEvent *dragMoveEvent);
 
     void deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetItems);
 
@@ -26,6 +30,9 @@ public:
 
 private:
     Ui::MainWindow *m_ui;
+
+signals:
+    void Download(QTreeWidgetItem *DropItem,int colmun);
 
 
 public slots:

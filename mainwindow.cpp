@@ -49,7 +49,7 @@ short SplitterRecord;
 Connect Client1;
 FileList *SurfingFile;
 
-QList<QTreeWidgetItem*> selectedList;
+QList<QTreeWidgetItem*> selectedFileList;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -81,9 +81,6 @@ MainWindow::MainWindow(QWidget *parent)
     SurfingFile->setGeometry(0,0,908,517);
 
     DockWidget = new PropertiesWidget(ui->statusShow,ui); //显示在statusShow里
-    DockWidget->show();
-
-
 
     QObject::connect(FileShare_Splitter,&QSplitter::splitterMoved,this,[=](){
         ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
@@ -227,29 +224,14 @@ MainWindow::MainWindow(QWidget *parent)
         if(!ui->statusShow->isEnabled()){
             ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->width(),FileShare_Splitter->height());
             SurfingFile->setGeometry(0,0,FileShare_Splitter->width(),FileShare_Splitter->height());
-
-
         }
 
         else{
-            //DOM更新
-
-
-
             qDebug("Prop2.1 Height:%d", FileShare_Splitter->widget(1)->size().height());
             qDebug("Prop2.2 Height:%d", DockWidget->height());
             qDebug("Prop2.3 Height:%d", ui->statusShow->height());
-
-//            qDebug("Prop2.4 Height:%d", FileShare_Splitter->pos().y());
-
             SurfingFile->setGeometry(0,0,FileShare_Splitter->width(),FileShare_Splitter->widget(0)->size().height()-SplitterRecord);
-
-
         }
-
-
-
-
 
     }); //item按下判断触发
 
@@ -263,9 +245,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     QObject::connect(this,&MainWindow::DockProgressCreate,DockWidget,&PropertiesWidget::ProgressCreate);
 
-    // QObject::connect(&Client1,&Connect::DownloadSpeedUpdate,this,[this](size_t bodySize){
-    //     ui->label_DownloadSpeedValue->setText(QString::fromStdString(std::to_string(bodySize)));
-    // });
+    QObject::connect(DockWidget,&PropertiesWidget::Download,this,&MainWindow::itemAccess);
 
     QObject::connect(&Client1,&Connect::DownloadSpeedUpdate,this,[this](float bodySize){
         ui->label_DownloadSpeedValue->setText(
@@ -307,10 +287,12 @@ MainWindow::MainWindow(QWidget *parent)
     QPropertyAnimation *FadingLabel = new QPropertyAnimation(label_MaxThreadCountValue,"pos");
 
 
-    QGraphicsOpacityEffect *SliderOpacity = new QGraphicsOpacityEffect(ThreadsSlider);          //Add opacity prop to uiWidget(ThreadsSlider)
+    QGraphicsOpacityEffect *SliderOpacity = new QGraphicsOpacityEffect(ThreadsSlider);
     SliderOpacity->setOpacity(1.0);                                                             //give value
-    ThreadsSlider->setGraphicsEffect(SliderOpacity);                                            //apply opacity in QObject
-    QPropertyAnimation *FadingSlider = new QPropertyAnimation(SliderOpacity,"opacity",this);    //QPropertyAnimation get opacity prop in SliderOpacity
+    ThreadsSlider->setGraphicsEffect(SliderOpacity);                                            //apply opacity in QGraphicsOpacityEffect
+    QPropertyAnimation *FadingSlider = new QPropertyAnimation(SliderOpacity,"opacity",this);    //QPropertyAnimation:Add opacity prop to uiWidget[QObject](ThreadsSlider)
+
+
 
     MaxThreadAnimation->addAnimation(FadingButton);
     MaxThreadAnimation->addAnimation(FadingLabel);
@@ -472,20 +454,20 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
         //在弹出之前 先过一个纯File判断
 
         QTreeWidget *Filelist = SurfingFile;
-        selectedList = Filelist->selectedItems();
+        selectedFileList = Filelist->selectedItems();
 
-        if(selectedList.size()>1){
-            for(auto &item:selectedList){
-                QString selectedListsName = item->text(nameList);
-                QString selectedListsSize = item->text(sizeList);
+        if(selectedFileList.size()>1){
+            for(auto &item:selectedFileList){
+                QString selectedFileListsName = item->text(nameList);
+                QString selectedFileListsSize = item->text(sizeList);
 
 
-                if(selectedListsSize!="—"){
+                if(selectedFileListsSize!="—"){
                     qDebug("you selected the %s,which size is:%s",item->text(nameList).toStdString().c_str(),item->text(sizeList).toStdString().c_str());
                 }
 
                 else{
-                    qDebug("you select %s which is not a File!",selectedListsName.toStdString().c_str());
+                    qDebug("you select %s which is not a File!",selectedFileListsName.toStdString().c_str());
                     //此处也应弹出Download 但是是不可点击状态(灰色) 所以还是别直接return false完事
                 }
 
@@ -554,20 +536,20 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
 //这里的column代表这一行里点击的位置判定(Icon->0/FileName->1/Size->2...) 不过我并没有对column作出什么更改需求
 
-//  QString selectedListsIcon = listItem->text(iconList);
-    QString selectedListsName = listItem->text(nameList);
-    QString selectedListsSize = listItem->text(sizeList);
-    QString selectedListsLink = listItem->text(linkList);
+//  QString selectedFileListsIcon = listItem->text(iconList);
+    QString selectedFileListsName = listItem->text(nameList);
+    QString selectedFileListsSize = listItem->text(sizeList);
+    QString selectedFileListsLink = listItem->text(linkList);
 
-    if(selectedListsSize!="—"){
+    if(selectedFileListsSize!="—"){
         QTreeWidget *Filelist = SurfingFile;
-        selectedList = Filelist->selectedItems();
+        selectedFileList = Filelist->selectedItems();
 
         QEventLoop DownloadLoop;
         QFutureWatcher<void> DownloadWatcher;
 
 
-        if(selectedList.size()>1){
+        if(selectedFileList.size()>1){
 
             QThreadPool DownloadPool;
 
@@ -577,18 +559,18 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
             int batch = 0;
             QList<QTreeWidgetItem *> TempList;
 
-            for(auto Item:selectedList){
+            for(auto Item:selectedFileList){
                 emit DockProgressCreate(Item);
             }
 
 
-            while(batch*DownloadPool.maxThreadCount()<selectedList.size()){
-                int residual =  selectedList.size()-batch*DownloadPool.maxThreadCount();
+            while(batch*DownloadPool.maxThreadCount()<selectedFileList.size()){
+                int residual =  selectedFileList.size()-batch*DownloadPool.maxThreadCount();
 
-                if(selectedList.size()-batch*DownloadPool.maxThreadCount()<DownloadPool.maxThreadCount()){
+                if(selectedFileList.size()-batch*DownloadPool.maxThreadCount()<DownloadPool.maxThreadCount()){
                     if(residual>1){
                         for(int i = 0;i<residual;i++){
-                            TempList.append(selectedList.at(i+batch*DownloadPool.maxThreadCount()));
+                            TempList.append(selectedFileList.at(i+batch*DownloadPool.maxThreadCount()));
                         }
 
 
@@ -607,7 +589,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
                     else{
 
-                        TempList.append(selectedList.at(batch*DownloadPool.maxThreadCount()));
+                        TempList.append(selectedFileList.at(batch*DownloadPool.maxThreadCount()));
 
                         DownloadWatcher.setFuture(QtConcurrent::map(TempList,[&](QTreeWidgetItem *selectedItem){
                             QString selectedName = selectedItem->text(nameList);
@@ -630,7 +612,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
                     QFutureWatcher<void> insideWatcher;
 
                     for(int i = 0;i<DownloadPool.maxThreadCount();i++){
-                        TempList.append(selectedList.at(i+batch*DownloadPool.maxThreadCount()));
+                        TempList.append(selectedFileList.at(i+batch*DownloadPool.maxThreadCount()));
                     }
 
 
@@ -662,8 +644,8 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         else{
             emit DockProgressCreate(listItem);
 
-            qDebug("you selected the %s,which size is:%s",selectedListsName.toStdString().c_str(),selectedListsSize.toStdString().c_str());
-            DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,&Client1,std::ref(selectedListsName),std::ref(selectedListsSize),std::ref(selectedListsLink)));
+            qDebug("you selected the %s,which size is:%s",selectedFileListsName.toStdString().c_str(),selectedFileListsSize.toStdString().c_str());
+            DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,&Client1,std::ref(selectedFileListsName),std::ref(selectedFileListsSize),std::ref(selectedFileListsLink)));
             QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
             DownloadLoop.exec();
 
@@ -673,8 +655,8 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
     }
 
    else{
-       qDebug("double clicked the itemName %s, it linked to:%s",selectedListsName.toStdString().c_str(),selectedListsLink.toStdString().c_str()); //colnmun指代 子信息
-       std::string Information = Client1.cliFileSurfing(selectedListsLink);
+       qDebug("double clicked the itemName %s, it linked to:%s",selectedFileListsName.toStdString().c_str(),selectedFileListsLink.toStdString().c_str()); //colnmun指代 子信息
+       std::string Information = Client1.cliFileSurfing(selectedFileListsLink);
 
        HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
 
@@ -694,7 +676,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         //Filelist update part.
         SurfingFile->clear();
 
-        if(selectedListsName==".."&&selectedListsLink==rootPath){
+        if(selectedFileListsName==".."&&selectedFileListsLink==rootPath){
            qDebug("redirect to the disk select.");
 
            Information = Client1.cliFileSurfing(rootPath);
@@ -778,7 +760,7 @@ void MainWindow::Rename(QTreeWidgetItem *listItem){
 void MainWindow::Delete(){
     QList<QString> LinkList;
 
-    selectedList = SurfingFile->selectedItems();
+    selectedFileList = SurfingFile->selectedItems();
 
     QMessageBox RemoteDeletePrompt;
 
@@ -797,7 +779,7 @@ void MainWindow::Delete(){
 
     QString DeleteFileList = "";
 
-    for(auto& List:selectedList){
+    for(auto& List:selectedFileList){
         qDebug("Ask for server to Delete item:%s",List->text(nameList).toStdString().c_str());
         LinkList.emplaceBack(List->text(linkList));
         DeleteFileList.append("\t"+List->text(nameList)+"\n");
@@ -811,7 +793,7 @@ void MainWindow::Delete(){
     RemoteDeletePrompt.exec();
 
     if(RemoteDeletePrompt.clickedButton() == DeleteButton){
-        for(auto& List:selectedList){
+        for(auto& List:selectedFileList){
             delete List;
         }
         Client1.cliFileDelete(LinkList);
@@ -905,13 +887,13 @@ void MainWindow::LostSelection(int column){
 void MainWindow::showStatus(bool &m_status){
     if(m_status == false){
         ui->statusShow->setVisible(true);
-        ui->statusShow->setDisabled(false);
+        ui->statusShow->setEnabled(true);
         m_status = true;
     }
 
     else{
         ui->statusShow->setVisible(false);
-        ui->statusShow->setDisabled(true);
+        ui->statusShow->setEnabled(false);
         m_status = false;
     }
     
@@ -922,47 +904,42 @@ void MainWindow::clearStatusList(){
 }
 
 //事件定义区
+//事件 不同于 信号与槽的高度封装 事件通常需要手动去配置 但同时自由度也比信号与槽高的多
 
-void MainWindow::closeEvent(QCloseEvent *event){
-
-    QMessageBox closeConfirm;
-
-    closeConfirm.question(this,tr("Quit"),tr("Are you sure to quit this application?"),QMessageBox::Yes|QMessageBox::No);
-
-    int choice = closeConfirm.exec();
+void MainWindow::closeEvent(QCloseEvent *closeEvent){
+    //question方法 会临时返回一个新的MessageBox对象 无需自己再去定义
+    int choice = QMessageBox::question(this,tr("Quit"),tr("Are you sure to quit this application?"),QMessageBox::Yes|QMessageBox::No);
 
     switch(choice){
-        case QMessageBox::Yes: {qApp->quit();break;}
-        case QMessageBox::No: {event->ignore();break;}
+        case QMessageBox::Yes: {closeEvent->accept();qApp->quit();break;}
+        case QMessageBox::No: {closeEvent->ignore();break;}
     }
 
 }
-
-//快捷键定义区
-
 
 void MainWindow::resizeEvent(QResizeEvent *resizeEvent){
 
     QSplitter *FileShare_Splitter = ui->PropTools;
 
-    qDebug("Prop 1 Height:%d",FileShare_Splitter->widget(0)->size().height());
-    qDebug("Prop 1 Width:%d",FileShare_Splitter->widget(0)->size().width());
+//    qDebug("Prop 1 Height:%d",FileShare_Splitter->widget(0)->size().height());
+//    qDebug("Prop 1 Width:%d",FileShare_Splitter->widget(0)->size().width());
 
-    qDebug("Prop 2 Height:%d",FileShare_Splitter->widget(1)->size().height());
-    qDebug("Prop 2 Width:%d",FileShare_Splitter->widget(1)->size().width());
+//    qDebug("Prop 2 Height:%d",FileShare_Splitter->widget(1)->size().height());
+//    qDebug("Prop 2 Width:%d",FileShare_Splitter->widget(1)->size().width());
 
     ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
 
     SurfingFile->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
-
-
     DockWidget->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
-    //生效 即在mainWindow下 允许控制 SurfingFile
 
+//    SurfingFile->style()->unpolish(SurfingFile);
+//    SurfingFile->style()->polish(SurfingFile);
 
 }
 
-//keyPressEvent 事件 不同于 信号与槽的高度封装 事件通常需要手动去配置 但同时自由度也比事件与槽高的多
+
+//快捷键定义区
+
 void MainWindow::keyPressEvent(QKeyEvent *event){
     QList<QTreeWidgetItem*> selectedTreeWidgetItems = SurfingFile->selectedItems();
 

@@ -262,6 +262,14 @@ Toaster也好 小红点也好 缩略图动画也好
 
 
 
+~~2.支持拖拽操作~~
+
+重写发送方的 mouseMoveEvent事件与接收方的dragEnter,dragEvent事件
+
+
+
+
+
 ****
 
 [UI_design]
@@ -272,7 +280,115 @@ Toaster也好 小红点也好 缩略图动画也好
 
 
 
-2.Qsplitter 划分出来的窗体大小还是没能理解怎么和整个UI进行同步
+~~2.Qsplitter 划分出来的窗体大小还是没能理解怎么和整个UI进行同步~~
+
+理解错误 实际上Qsplitter一直都对窗口的index1，index2的大小一直追踪
+
+只是它没法获取那个窗口内的widget情况。
+
+
+
+如果窗口内的widget是传统的用ui文件还算好处理
+
+如果是纯自定义继承而且还不用上ui文件的话 想追踪这个widget信息就比带ui文件的方式要麻烦点
+
+而且也不好进行控件的刷新
+
+
+
+3.new Issue 关于直接引入自定义控件导致的各种刷新措施完全失效的问题
+
+
+
+这大抵是两个窗口widget的管理问题
+
+QSplitter->widget(1) 本身是一个widget
+
+其内部的widget显示就更是一个widget
+
+
+
+理论上来讲 应当将两个widget的geometry属性同步，以保持widget显示不会变乱。
+
+
+
+然而在我这个项目里 事实上是
+
+外层的geometry属性和内层的却不一样。。
+
+
+
+> FileShare_Splitter->widget(1)->size().height() >> 230
+>
+> ui->statusShow->height() >> 230
+>
+> DockWidget->height() >> 300
+
+
+
+实际上是我把 DockWidget 的miniumSize属性设置为300造成的
+
+如果我不设置这个值的话 无论我DockWidget 构造函数里将其geometry属性设置的怎么样
+
+
+
+它最终的初始点开大小永远是整个widget的最小值。。非常奇怪。
+
+
+
+而且最为奇怪的还是我将 DockWidget  调整了Qsplitter里面之后
+
+mainwindow构造函数里的
+
+```
+DockWidget->show();
+```
+
+居然直接失效了？
+
+不止它 还有外置窗口的
+
+```
+ui->statusShow->setEnabled(true);
+ui->statusShow->setVisible(true);
+```
+
+也全失效了
+
+
+
+而启动加载完之后的窗口显示切换功能却一切正常
+
+
+
+难道这也是窗口延迟弹出的原因？
+
+难道Qsplitter把widget控件变成窗口了??
+
+
+
+毕竟这个功能 依旧起作用 仅仅是构造函数里的完全不会起作用
+
+```
+void MainWindow::showStatus(bool &m_status){
+    if(m_status == false){
+        ui->statusShow->setVisible(true);
+        ui->statusShow->setEnabled(true);
+        m_status = true;
+    }
+
+    else{
+        ui->statusShow->setVisible(false);
+        ui->statusShow->setEnabled(false);
+        m_status = false;
+    }
+    
+}
+```
+
+
+
+不是很懂。。
 
 
 
@@ -292,7 +408,7 @@ LOW LEVEL
 
 
 
-1.1淡入显示美化
+~~1.1淡入显示美化~~
 
 
 
@@ -305,6 +421,22 @@ LOW LEVEL
 
 
 那些内置dll的exe是怎么搞出来的?
+
+****
+
+TODO:
+
+NewDir功能
+
+计划直接在QTreeWidget上操作，自动在鼠标指向的下一个widgetItem里
+
+插入新的QTreeWidgetItem 且名称一栏为编辑模式
+
+输入完按下Enter/失去焦点时弹出窗口以确认是否为该名字新建文件夹
+
+如名称为空，则取消NewDir操作(回滚)
+
+
 
 
 

@@ -30,7 +30,8 @@ extern Connect Client1;
 extern std::string DownloadPath;
 QList<QString> DownloadSpeedList;
 
-QList<QTreeWidgetItem*> selectedTreeWidgetItems;
+QList<QTreeWidgetItem*> selectedTaskList;
+extern QList<QTreeWidgetItem*> selectedFileList;
 
 PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QWidget(parent),
@@ -95,7 +96,7 @@ PropertiesWidget::~PropertiesWidget(){
 //slots:
 bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
 
-    selectedTreeWidgetItems = ui->treeWidgetTaskQueue->selectedItems();
+    selectedTaskList = ui->treeWidgetTaskQueue->selectedItems();
     if(listItem==nullptr) return false;
 
     if(qApp->mouseButtons() == Qt::RightButton){
@@ -165,7 +166,7 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
         QObject::connect(Open_From_Folder,&QAction::triggered,this,[listItem,this](){return OpenFileFromFolder(listItem,0);});
 
         QObject::connect(Remove,&QAction::triggered,this,[this](){
-            deletePrompt(selectedTreeWidgetItems);
+            deletePrompt(selectedTaskList);
         });
     }
 
@@ -174,10 +175,10 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
 
 //generalFunction:
 
-void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetItems){
+void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTaskList){
     qDebug()<<"deletePrompt";
 
-    if(!selectedTreeWidgetItems.length()) return;
+    if(!selectedTaskList.length()) return;
 
     //*prompt 删除本地文件 确认
     QMessageBox DeleteConfirm;
@@ -186,9 +187,9 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetIt
     DeleteConfirm.setStyleSheet(
         R"(
             QLabel {
-                min-width:100px;
-                min-height:40px;
-                font-size:1ProgressBarpx;
+                min-width:120px;
+                min-height:60px;
+                font-size:12px;
             }
         )"
     );
@@ -199,9 +200,17 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetIt
 
     std::string Text = "已选中0个文件";
 
-    if(selectedTreeWidgetItems.length()>1){
+    if(selectedTaskList.length()>1){
         //UTF-8 汉字编码为3字节 "已选中" 然后再减去索引的1得出需要修改的目标index:9
-        Text.replace(9,1,std::to_string(selectedTreeWidgetItems.length()));
+        Text.replace(9,1,std::to_string(selectedTaskList.length()));
+
+        Text.append("\n");
+
+        for(auto currentFileName:selectedTaskList){
+            Text.append(currentFileName->text(FilenameList).toStdString());
+            Text.append("\n");
+        }
+
         DeleteConfirm.setText(QString::fromStdString(Text));
     }
 
@@ -212,7 +221,7 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetIt
     DeleteConfirm.exec();
 
     if(DeleteConfirm.clickedButton() == DeleteButton){
-        for(auto CurrentItem:selectedTreeWidgetItems){
+        for(auto CurrentItem:selectedTaskList){
             QString FullPath = CurrentItem->text(StoragePathList)+CurrentItem->text(FilenameList);
             //correctWay delete u8
             qDebug("deletePath:%s",FullPath.toStdString().c_str());
@@ -223,7 +232,7 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTreeWidgetIt
     }
 
     else if(DeleteConfirm.clickedButton() == DeniedButton){
-        for(auto CurrentItem:selectedTreeWidgetItems){
+        for(auto CurrentItem:selectedTaskList){
             delete CurrentItem;
         }
     }
@@ -246,7 +255,7 @@ void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
 
                                     // Status,  Filename,      Progress,    Size,      Speed,DateTime,     storagePath
-    QList<QString> newItemInformation{"Pending",Item->text(1),"Progress",Item->text(2),"—","DateTime",QString::fromStdString(DownloadPath)};
+    QList<QString> newItemInformation{"Pending",Item->text(FilenameList),"Progress",Item->text(2),"—","DateTime",QString::fromStdString(DownloadPath)};
 
     ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
 
@@ -340,25 +349,25 @@ void PropertiesWidget::ActionPressed(){
     //似乎会自动检测信号触发的 sender 而前面的 (QPushButton*)则是类
     //也就是说 理论上。。 可以 auto *[Name] = (anyType QObject*)sender
 
-    selectedTreeWidgetItems = ui->treeWidgetTaskQueue->selectedItems();
-    qDebug("selectedLength:%zu",selectedTreeWidgetItems.length());
+    selectedTaskList = ui->treeWidgetTaskQueue->selectedItems();
+    qDebug("selectedLength:%zu",selectedTaskList.length());
 
     if(button->text() == "Continue"){
-        for(auto& TreeItem:selectedTreeWidgetItems){
+        for(auto& TreeItem:selectedTaskList){
             StatusChanged(Downloading,TreeItem);
         }
         return;
     }
 
     else if(button->text() == "Pause"){
-        for(auto& TreeItem:selectedTreeWidgetItems){
+        for(auto& TreeItem:selectedTaskList){
             StatusChanged(Paused,TreeItem);
         }
         return;
     }
 
     else{
-        deletePrompt(selectedTreeWidgetItems);
+        deletePrompt(selectedTaskList);
         return;
     }
 
@@ -367,13 +376,13 @@ void PropertiesWidget::ActionPressed(){
 
 void PropertiesWidget::keyPressEvent(QKeyEvent *event){
 
-    selectedTreeWidgetItems = ui->treeWidgetTaskQueue->selectedItems();
+    selectedTaskList = ui->treeWidgetTaskQueue->selectedItems();
 
-    qDebug("selectedLength:%zu",selectedTreeWidgetItems.length());
+    qDebug("selectedLength:%zu",selectedTaskList.length());
 
         switch(event->key()){
             case Qt::Key_Return: {
-                for(auto& TreeItem:selectedTreeWidgetItems){
+                for(auto& TreeItem:selectedTaskList){
                     qDebug()<<"listItem Address:"<<TreeItem;
                     if(TreeItem->text(StatusList)!="Finished") continue; //未在完成状态时 不要打开它
                     emit ui->treeWidgetTaskQueue->itemDoubleClicked(TreeItem, 0);
@@ -382,15 +391,42 @@ void PropertiesWidget::keyPressEvent(QKeyEvent *event){
             }
 
             case Qt::Key_Delete: {
-                deletePrompt(selectedTreeWidgetItems);
+                deletePrompt(selectedTaskList);
                 break;
             }
         }
 }
 
-void PropertiesWidget::resizeEvent(QResizeEvent *resizeEvent){
-
-
-    qDebug("frame_TaskQueue Height:%d",this->ui->frame_TaskQueue->geometry().size().height());
-    qDebug("frame_TaskQueue Width:%d",this->ui->frame_TaskQueue->geometry().size().width());
+void PropertiesWidget::dragMoveEvent(QDragMoveEvent *dragMoveEvent){
+    dragMoveEvent->acceptProposedAction();
 }
+
+void PropertiesWidget::dragEnterEvent(QDragEnterEvent *dragEnterEvent){
+
+    if(dragEnterEvent->mimeData()->hasFormat("application/x-qwidget")){
+        dragEnterEvent->acceptProposedAction();
+        qDebug("Accept dragEnterEvent x-qwidget Type Drag");
+    }
+
+    else{
+        dragEnterEvent->ignore();
+    }
+}
+
+void PropertiesWidget::dropEvent(QDropEvent *dropEvent){
+
+    if(dropEvent->mimeData()->hasFormat("application/x-qwidget")){
+        qDebug("Accept dropEvent x-qwidget Type Drag");
+        qDebug("selectedTaskList.length:%zu",selectedFileList.length());
+        if(!selectedFileList.length()) return;
+
+        emit Download(selectedFileList.at(0),0);
+
+    }
+
+}
+
+//void PropertiesWidget::resizeEvent(QResizeEvent *resizeEvent){
+//    qDebug("frame_TaskQueue Height:%d",this->ui->frame_TaskQueue->geometry().size().height());
+//    qDebug("frame_TaskQueue Width:%d",this->ui->frame_TaskQueue->geometry().size().width());
+//}

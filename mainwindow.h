@@ -47,23 +47,13 @@ private:
     IP_controlPanel *IP_controlPanelWindow;
     PropertiesWidget *DockWidget;
 
-    QThread *thread; // 定义一个 QThread 的指针
-
-
 private slots:
     void Tab_pressed();
     void itemAccess(QTreeWidgetItem *listItem, int column);
     bool FileList_Menu(QTreeWidgetItem *listItem, int column);
 
-    // void updatePropertiesProgress(size_t& Progress,QTreeWidgetItem* listItem);
 
-
-    // void menuPressSlot();
-
-//menuList
-
-    //General Area
-    // void Test();
+/*Right Click menuList */
     void Rename(QTreeWidgetItem *listItem);
     void Delete();
     void NewDir();
@@ -71,24 +61,12 @@ private slots:
     void Cut();
 
     void Refresh();
-
-    
-    
-
-    //Dir Area
-    // void Open() -> itemAccess
-    
-    //File Area
-    // void Download(); -> itemAccess
-
-
+/*Function Area */
     void LostSelection(int column);
-
     void showStatus(bool&);
-
     void clearStatusList();
 
-    // void SurfingDownloadPath();
+
 
 signals:
     void connetPressed();

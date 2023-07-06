@@ -163,39 +163,33 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
         qDebug()<<"create new File failed";
     }
 
-
     float floatSpeed = 0;
-
     float RecordProgress = 0;
 
     auto res = cli.Get(itemLink.toStdString(),
       [&](const char *data, size_t data_length) {
-
-//        floatSpeed += sizeof(data);
-
         body.append(std::move(data), data_length);
-        
-        FProgress = (body.size()*100/fliterSize);
+        FProgress = (body.size()*100/fliterSize); //基本上是第一次计时周期的MB速度 本地上跑一般为102400000
 
         QString itemSpeed;
 
-        //25000 tick? update
+        //25000 tick? update 不严谨 但是暂时没找到简易的cpp计时器方法 基于内核的tick显然不行 因为每个人的算力都不一样
         if(intervalflag == 25000){
 
+            //inital Speed
             if(!RecordProgress){
                 RecordProgress = FProgress;
                 floatSpeed = (FProgress*fliterSize)/100;
-                qDebug("inital Float Speed:%f",floatSpeed);
-//                itemSpeed = QString::fromStdString(std::to_string(FProgress*fliterSize));
+                qDebug("inital Float Speed:%f MB/s",floatSpeed/1024/1024);
+
             }
 
-            //After
-
+            //根据第一次或者是上一次的进度变化 推算25000ticks内的下载速度
             else{
-                float Residual;
-                Residual = (FProgress - RecordProgress)/100;
-                floatSpeed = Residual*fliterSize;
-//                itemSpeed = QString::fromStdString(std::to_string(Residual*fliterSize));
+                float ProgressResidual;
+                ProgressResidual = (FProgress - RecordProgress)/100;
+                RecordProgress += FProgress - RecordProgress;
+                floatSpeed = ProgressResidual*fliterSize;
             }
 
             if(floatSpeed>1024*1024*1024){
@@ -228,8 +222,6 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
 
             floatSpeed = 0;
             intervalflag = 0;
-
-
 
         }
 

@@ -100,6 +100,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         SplitterRecord = FileShare_Splitter->widget(1)->size().height();
 
+
     });
 
     QObject::connect(SurfingFile,&FileList::Upload,this,[this](QList<QUrl> DropList){
@@ -219,11 +220,11 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(TaskQueue,&QPushButton::clicked,this,[=](){
         showStatus(m_status);
 
-
         //disable下
         if(!ui->statusShow->isEnabled()){
             ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->width(),FileShare_Splitter->height());
             SurfingFile->setGeometry(0,0,FileShare_Splitter->width(),FileShare_Splitter->height());
+
         }
 
         else{
@@ -491,7 +492,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
 
         });
 
-        QObject::connect(Download,&QAction::triggered,this,[listItem, this](){emit DownloadPressed("Downloading",listItem);});
+        
 
     }
 
@@ -572,7 +573,6 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
                         for(int i = 0;i<residual;i++){
                             TempList.append(selectedFileList.at(i+batch*DownloadPool.maxThreadCount()));
                         }
-
 
                         DownloadWatcher.setFuture(QtConcurrent::map(TempList,[&](QTreeWidgetItem *selectedItem){
                             QString selectedName = selectedItem->text(nameList);
@@ -828,8 +828,9 @@ void MainWindow::Upload(){
     UploadVector.shrink_to_fit();
 
     qDebug("Upload File.");
-            //说起来多集合的QString 得用官方提供的QStringList来装载
-            //然而内部方法与vector却没什么不同
+
+    //说起来多集合的QString 得用官方提供的QStringList来装载
+    //然而内部方法与vector却没什么不同
 
     QStringList UploadFiles = QFileDialog::getOpenFileNames(
         nullptr,
@@ -921,19 +922,16 @@ void MainWindow::resizeEvent(QResizeEvent *resizeEvent){
 
     QSplitter *FileShare_Splitter = ui->PropTools;
 
-//    qDebug("Prop 1 Height:%d",FileShare_Splitter->widget(0)->size().height());
-//    qDebug("Prop 1 Width:%d",FileShare_Splitter->widget(0)->size().width());
+    // ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
 
-//    qDebug("Prop 2 Height:%d",FileShare_Splitter->widget(1)->size().height());
-//    qDebug("Prop 2 Width:%d",FileShare_Splitter->widget(1)->size().width());
+    // SurfingFile->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
+    // DockWidget->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
 
     ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
-
     SurfingFile->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
     DockWidget->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
+    SplitterRecord = FileShare_Splitter->widget(1)->size().height();
 
-//    SurfingFile->style()->unpolish(SurfingFile);
-//    SurfingFile->style()->polish(SurfingFile);
 
 }
 

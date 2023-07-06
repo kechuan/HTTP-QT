@@ -34,11 +34,6 @@ IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
     QObject::connect(ui->pushButton_Connect,SIGNAL(released()),this,SLOT(action_pressed()));
     QObject::connect(ui->pushButton_Abort,SIGNAL(released()),this,SLOT(action_pressed()));
 
-    QObject::connect(ui->pushButton_Connect,SIGNAL(pressed()),this,SLOT(action_pressed()));
-
-
-//    PropertiesWidget *DockWidget = PropertiesWidget();
-
     qDebug() << "IP_controlPanel created.";
 
 }
@@ -53,8 +48,6 @@ IP_controlPanel::~IP_controlPanel()
 void IP_controlPanel::action_pressed(){
    qDebug() << "action IP cotrolPanel Trigger";
 
-
-
    QTextBrowser *log_view = m_ui->textBrowser_log;
    QPushButton *button = (QPushButton*)sender();
    QString buttonName = button->text();
@@ -66,9 +59,11 @@ void IP_controlPanel::action_pressed(){
             FullIP = QString("%1.%2.%3.%4").arg(ui->lineEdit_IP_1->text(),ui->lineEdit_IP_2->text(),ui->lineEdit_IP_3->text(),ui->lineEdit_IP_4->text());
             Port = ui->lineEdit_Port->text().toInt();
 
-            log_view->append(R"(<span style=" color:#ffffff;">)"+buttonName+FullIP+":"+ui->lineEdit_Port->text()+R"(</span>)");
+            log_view->append(R"(<span style=" color:#ffffff;">)"+buttonName+" "+FullIP+":"+ui->lineEdit_Port->text()+R"(</span>)");
 
             if(Client1.cliPing()){
+                log_view->append(R"(<span style=" color:#ffffff;">Ping Succ</span>)");
+
                 std::string Information = Client1.cliFileSurfing();
                 HTMLExtract(Information,LinkVector,NameVector);
 
@@ -82,17 +77,13 @@ void IP_controlPanel::action_pressed(){
                 }
 
                 ui->pushButton_Connect->setEnabled(false);
-                QWidget::close(); //原来如此。。 
+                QWidget::close(); //原来如此 widget是有直接close的功能的 应该等效于点X关闭。。
 
 
             }
 
             else{
-                //链接超时处理
-                QMessageBox TimeoutPrompt;
-                TimeoutPrompt.setText(tr("链接超时 请检查是否已打开服务器"));
-                TimeoutPrompt.exec();
-
+                QMessageBox::information(this,tr("ping error"),tr("链接超时 请检查是否已打开服务器"));
             }
         }
 

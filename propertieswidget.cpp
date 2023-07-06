@@ -65,7 +65,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
 
     QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemChanged,this,[=]{
 
-        //不知道为什么 但总之它不会监听删除事件
+        //不知道为什么 但总之itemChanged不会监听删除事件
         m_ui->label_DownloadSpeedValue->setText("0"); //default value: 0
 
         int PropTaskLength = treeWidgetTaskQueue->topLevelItemCount();
@@ -77,7 +77,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
 
             if(currentTask->text(SpeedList)!="—"){
                 qDebug("itemSpeed:%s",currentTask->text(SpeedList).toStdString().c_str());
-//                DownloadSpeedList.append(currentTask->text(SpeedList));
+                   //DownloadSpeedList.append(currentTask->text(SpeedList));
             }
 
         }
@@ -354,6 +354,7 @@ void PropertiesWidget::ActionPressed(){
 
     if(button->text() == "Continue"){
         for(auto& TreeItem:selectedTaskList){
+            if(TreeItem->text(0) == "Finished") continue;
             StatusChanged(Downloading,TreeItem);
         }
         return;
@@ -361,6 +362,7 @@ void PropertiesWidget::ActionPressed(){
 
     else if(button->text() == "Pause"){
         for(auto& TreeItem:selectedTaskList){
+            if(TreeItem->text(0) == "Finished") continue;
             StatusChanged(Paused,TreeItem);
         }
         return;

@@ -180,7 +180,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
             if(!RecordProgress){
                 RecordProgress = FProgress;
                 floatSpeed = (FProgress*fliterSize)/100;
-                qDebug("inital Float Speed:%f MB/s",floatSpeed/1024/1024);
+                //qDebug("inital Float Speed:%f MB/s",floatSpeed/1024/1024);
 
             }
 
@@ -216,7 +216,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
             }
 
 
-            qDebug("Second Float Speed:%f",floatSpeed);
+            //qDebug("Second Float Speed:%f",floatSpeed);
 
             emit ProgressUpdate(itemName,FProgress,itemSize,itemSpeed,itemLink);
 

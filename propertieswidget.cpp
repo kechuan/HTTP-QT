@@ -6,6 +6,8 @@
 
 #include <QtWidgets>
 #include <QThread>
+#include <QTimer>
+//#include <QTime>
 
 enum QueueList{
     StatusList,
@@ -26,12 +28,19 @@ enum StatusList{
     Pending,
 };
 
+int PropTaskCount;
+
 extern Connect Client1;
 extern std::string DownloadPath;
 QList<QString> DownloadSpeedList;
 
 QList<QTreeWidgetItem*> selectedTaskList;
 extern QList<QTreeWidgetItem*> selectedFileList;
+
+//QTime basicTime;
+QTimer *timer;
+bool DownloadingStatus = false;
+
 
 PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QWidget(parent),
@@ -63,23 +72,67 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QObject::connect(Paused_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
     QObject::connect(Remove_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
 
+    QTimer *timer = new QTimer(this);
+
     QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemChanged,this,[=]{
+        //不知道为什么 但总之itemChanged不会监听delete删除事件
 
-        //不知道为什么 但总之itemChanged不会监听删除事件
+        if(DownloadingStatus) return; //当处在下载状态时 多次触发该事件 跳过
+
+        if(!PropTaskCount){
+            qDebug("new Task Listen Start.");
+            PropTaskCount = treeWidgetTaskQueue->topLevelItemCount();
+            timer->start(500); //开启监听 0.5s刷新
+
+            DownloadingStatus = true;
+        }
+
+        else{
+            if(treeWidgetTaskQueue->topLevelItemCount()>PropTaskCount){
+                qDebug("Append Task Listen Start.");
+                PropTaskCount = treeWidgetTaskQueue->topLevelItemCount();
+                timer->start(500); //开启监听 0.5s刷新
+
+                DownloadingStatus = true;
+            }
+
+
+        }
+
+
+
+
+    });
+
+
+
+    QObject::connect(timer,&QTimer::timeout,this,[=]{
         m_ui->label_DownloadSpeedValue->setText("0"); //default value: 0
-
-        int PropTaskLength = treeWidgetTaskQueue->topLevelItemCount();
 
         QTreeWidgetItem *currentTask;
 
-        for(int TaskIndex = 0;TaskIndex<PropTaskLength;TaskIndex++){
-            currentTask = treeWidgetTaskQueue->topLevelItem(TaskIndex);
+        if(DownloadingStatus){
+            DownloadingStatus = false; //默认状态为false 但是这样操作 线程大概不安全
 
-            if(currentTask->text(SpeedList)!="—"){
-                qDebug("itemSpeed:%s",currentTask->text(SpeedList).toStdString().c_str());
-                   //DownloadSpeedList.append(currentTask->text(SpeedList));
+            for(int TaskIndex = 0;TaskIndex<PropTaskCount;TaskIndex++){
+                currentTask = treeWidgetTaskQueue->topLevelItem(TaskIndex);
+
+                if(currentTask->text(StatusList)=="Downloading" || "Pending"){
+                    if(currentTask->text(SpeedList)!="—"){
+                        qDebug("currentTask Name:%s,itemSpeed:%s",currentTask->text(FilenameList).toStdString().c_str(),currentTask->text(SpeedList).toStdString().c_str());
+                        DownloadingStatus = true; //只要有任一一项还在活跃的任务 监控继续
+                    }
+                }
+
+
+
+
             }
+        }
 
+        else{
+            timer->stop();
+            qDebug("下载监控终止");
         }
 
     });
@@ -266,7 +319,7 @@ void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
 
 void PropertiesWidget::ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSize,const QString& itemSpeed,const QString& itemLink){
 
-    qDebug() << "from thread slot:" << QThread::currentThreadId();
+    //qDebug() << "from thread slot:" << QThread::currentThreadId();
 
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
     Qt::MatchFlags flag = Qt::MatchExactly;
@@ -376,13 +429,13 @@ void PropertiesWidget::ActionPressed(){
 }
 
 
-void PropertiesWidget::keyPressEvent(QKeyEvent *event){
+void PropertiesWidget::keyPressEvent(QKeyEvent *keyPressEvent){
 
     selectedTaskList = ui->treeWidgetTaskQueue->selectedItems();
 
     qDebug("selectedLength:%zu",selectedTaskList.length());
 
-        switch(event->key()){
+        switch(keyPressEvent->key()){
             case Qt::Key_Return: {
                 for(auto& TreeItem:selectedTaskList){
                     qDebug()<<"listItem Address:"<<TreeItem;

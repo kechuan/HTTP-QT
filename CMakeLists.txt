@@ -31,7 +31,7 @@ set(PROJECT_SOURCES
         propertieswidget.cpp propertieswidget.h propertieswidget.ui
         DelegateProgressBar.h
         FileList.h FileList.cpp
-        #FileList.ui
+#        timer.h timer.cpp
 
         ${TS_FILES}
 )

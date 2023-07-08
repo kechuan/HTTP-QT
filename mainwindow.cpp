@@ -244,10 +244,10 @@ MainWindow::MainWindow(QWidget *parent)
     //QObject是一个抽象类 似乎因为如此 connect需要用引用符号获得它的地址来进行操作
     //我真的特别谢谢QT还保留了地址的重载写法。。
 
+    QObject::connect(DockWidget,&PropertiesWidget::Download,this,&MainWindow::itemAccess);
     QObject::connect(this,&MainWindow::DockProgressCreate,DockWidget,&PropertiesWidget::ProgressCreate);
 
-    QObject::connect(DockWidget,&PropertiesWidget::Download,this,&MainWindow::itemAccess);
-
+    //对于静态对象 想融入进QObject的*sender 只需要继承了QObject之后 使用取地址符变成指向地址就好
     QObject::connect(&Client1,&Connect::DownloadSpeedUpdate,this,[this](float bodySize){
         ui->label_DownloadSpeedValue->setText(
             QString::fromStdString(

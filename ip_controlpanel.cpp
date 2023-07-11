@@ -34,6 +34,39 @@ IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
     QObject::connect(ui->pushButton_Connect,SIGNAL(released()),this,SLOT(action_pressed()));
     QObject::connect(ui->pushButton_Abort,SIGNAL(released()),this,SLOT(action_pressed()));
 
+    QObject::connect(ui->lineEdit_IP_1,&QLineEdit::textChanged,this,[this]{
+        if(ui->lineEdit_IP_1->text().toInt()>255){
+            ui->lineEdit_IP_1->setText("255");
+        }
+    });
+
+    QObject::connect(ui->lineEdit_IP_2,&QLineEdit::textChanged,this,[this]{
+        if(ui->lineEdit_IP_2->text().toInt()>255){
+            ui->lineEdit_IP_2->setText("255");
+        }
+    });
+
+    QObject::connect(ui->lineEdit_IP_3,&QLineEdit::textChanged,this,[this]{
+        if(ui->lineEdit_IP_3->text().toInt()>255){
+            ui->lineEdit_IP_3->setText("255");
+        }
+    });
+
+    QObject::connect(ui->lineEdit_IP_4,&QLineEdit::textChanged,this,[this]{
+        if(ui->lineEdit_IP_4->text().toInt()>255){
+            ui->lineEdit_IP_4->setText("255");
+        }
+    });
+
+    QRegularExpression LimitInputNumber(R"(\d{1,3}$)");
+
+    QValidator *validator = new QRegularExpressionValidator(LimitInputNumber);
+
+    ui->lineEdit_IP_1->setValidator(validator);
+    ui->lineEdit_IP_2->setValidator(validator);
+    ui->lineEdit_IP_3->setValidator(validator);
+    ui->lineEdit_IP_4->setValidator(validator);
+
     qDebug() << "IP_controlPanel created.";
 
 }

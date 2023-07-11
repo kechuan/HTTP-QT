@@ -22,16 +22,18 @@ set(TS_FILES HTTP-QT_zh_CN.ts)
 set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp mainwindow.h mainwindow.ui
-        about.cpp about.h about.ui
+        about.h about.cpp about.ui
         ./dependences/extern_lib/httplib.h
         ./dependences/extern_lib/json.hpp
         ./dependences/HTMLFliter.h
-        connect.cpp connect.h
-        ip_controlpanel.cpp ip_controlpanel.h ip_controlpanel.ui
-        propertieswidget.cpp propertieswidget.h propertieswidget.ui
+        ./dependences/sizeTextHandler.h
+        ./dependences/sizeTextHandler.cpp
+        connect.h connect.cpp
+        ip_controlpanel.h ip_controlpanel.cpp ip_controlpanel.ui
+        propertieswidget.h propertieswidget.cpp propertieswidget.ui
         DelegateProgressBar.h
         FileList.h FileList.cpp
-#        timer.h timer.cpp
+
 
         ${TS_FILES}
 )

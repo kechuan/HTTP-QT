@@ -3,11 +3,11 @@
 #include "DelegateProgressBar.h"
 
 #include "connect.h"
+#include "./dependences/sizeTextHandler.h"
 
 #include <QtWidgets>
 #include <QThread>
 #include <QTimer>
-//#include <QTime>
 
 enum QueueList{
     StatusList,
@@ -29,6 +29,7 @@ enum StatusList{
 };
 
 int PropTaskCount;
+double SpeedCount;
 
 extern Connect Client1;
 extern std::string DownloadPath;
@@ -37,7 +38,6 @@ QList<QString> DownloadSpeedList;
 QList<QTreeWidgetItem*> selectedTaskList;
 extern QList<QTreeWidgetItem*> selectedFileList;
 
-//QTime basicTime;
 QTimer *timer;
 bool DownloadingStatus = false;
 
@@ -96,14 +96,9 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
                 DownloadingStatus = true;
             }
 
-
         }
 
-
-
-
     });
-
 
 
     QObject::connect(timer,&QTimer::timeout,this,[=]{
@@ -119,15 +114,18 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
 
                 if(currentTask->text(StatusList)=="Downloading" || "Pending"){
                     if(currentTask->text(SpeedList)!="—"){
+                        std::string SpeedText = currentTask->text(SpeedList).toStdString();
                         qDebug("currentTask Name:%s,itemSpeed:%s",currentTask->text(FilenameList).toStdString().c_str(),currentTask->text(SpeedList).toStdString().c_str());
+                        SpeedCount+=StringToSize(SpeedText);
                         DownloadingStatus = true; //只要有任一一项还在活跃的任务 监控继续
                     }
                 }
-
-
-
-
             }
+
+            qDebug("totalSpeed: %fMB/s",SpeedCount/1024/1024);
+
+            m_ui->label_DownloadSpeedValue->setText(QString::fromStdString(SizeToString(SpeedCount)));
+
         }
 
         else{

@@ -11,6 +11,8 @@
 class Connect:public QObject{
     Q_OBJECT
 public:
+    Connect();
+
     bool cliPing();
 
     std::string cliFileSurfing();
@@ -24,7 +26,6 @@ public:
 
     std::string ReadTheFile(QString &Qpath,std::string &Information);
 
-
 private:
     void Abort();
 
@@ -32,6 +33,7 @@ signals:
     void ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSize,const QString& itemSpeed,const QString& itemLink);
     void DownloadSpeedUpdate(float& bodySize);
     void Downloading(std::map<std::string,int> &TaskMap,std::string& Name,int &Progress);
+
 
 };
 

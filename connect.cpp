@@ -27,13 +27,11 @@ QTimer *UpdateProgressTimer;
 bool UpdateProgressFlag = false;
 
 Connect::Connect(){
-
+    qDebug() << "Connect ID:" << QThread::currentThreadId();
     UpdateProgressTimer = new QTimer(this);
 
-    //current Thread QThreadPoolThread.
     QObject::connect(UpdateProgressTimer,&QTimer::timeout,this,[]{
         UpdateProgressFlag = true;
-        qDebug("time out trigger");
     });
 }
 
@@ -143,7 +141,6 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     double SpeedValue = 0;
 
     std::string DownloadContent;
-    
 
     QTimer::singleShot(0,this,[=]{
         qDebug() << "UpdateProgressTimer Start ID:" << QThread::currentThreadId();

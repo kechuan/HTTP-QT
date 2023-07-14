@@ -19,13 +19,7 @@
   <property name="minimumSize">
    <size>
     <width>912</width>
-    <height>300</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>2024</width>
-    <height>2000</height>
+    <height>150</height>
    </size>
   </property>
   <property name="windowTitle">

@@ -922,16 +922,12 @@ void MainWindow::resizeEvent(QResizeEvent *resizeEvent){
 
     QSplitter *FileShare_Splitter = ui->PropTools;
 
-    // ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
-
-    // SurfingFile->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
-    // DockWidget->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
-
     ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
     SurfingFile->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
+
+    ui->statusShow->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
     DockWidget->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
     SplitterRecord = FileShare_Splitter->widget(1)->size().height();
-
 
 }
 

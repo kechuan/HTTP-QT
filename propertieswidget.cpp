@@ -20,12 +20,12 @@ enum QueueList{
 };
 
 enum StatusList{
+    Pending,
     Downloading,
     Uploading,
     Paused,
     Finished,
     Failed,
-    Pending,
 };
 
 int PropTaskCount;
@@ -234,12 +234,14 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTaskList){
     //*prompt 删除本地文件 确认
     QMessageBox DeleteConfirm;
 
+
+
     //窗体基础样式设置
     DeleteConfirm.setStyleSheet(
         R"(
             QLabel {
                 min-width:120px;
-                min-height:60px;
+                max-height:180px;
                 font-size:12px;
             }
         )"
@@ -263,6 +265,7 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTaskList){
         }
 
         DeleteConfirm.setText(QString::fromStdString(Text));
+        DeleteConfirm.adjustSize();
     }
 
     QPushButton *DeleteButton = DeleteConfirm.addButton("Delete",QMessageBox::AcceptRole);

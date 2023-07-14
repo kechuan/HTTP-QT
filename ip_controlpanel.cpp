@@ -58,7 +58,7 @@ IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
         }
     });
 
-    QRegularExpression LimitInputNumber(R"(\d{1,3}$)");
+    QRegularExpression LimitInputNumber(R"(\d{1,4}$)");
 
     QValidator *validator = new QRegularExpressionValidator(LimitInputNumber);
 

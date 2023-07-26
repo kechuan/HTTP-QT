@@ -11,17 +11,18 @@ inline std::regex HTMLDiskReg(R"((path=)+(.*))", std::regex::icase);            
 inline std::regex HTMLNameReg(R"(<\s*div\s+[^>]*class\s*=\"(dirname|filename)\">+([^<]*))", std::regex::icase);       //target group2
 inline std::regex HTMLSizeReg(R"(<\s*div\s*+[^>]*class\s*=\"filesize\">+([^<]*))", std::regex::icase);                //target group1
 
-inline std::regex MenuContentMatch(R"!!(<ul>+(.*?)+</ul>)!!");                                                      //target group0
+inline std::regex MenuContentMatch(R"(<ul>+(.*?)+</ul>)");                                                      //target group0
 inline std::regex list(R"(<div\s*id=\"list\">)");
 
 inline std::smatch matches;
 
 
-inline void copy_template(std::string& string, std::regex &regexp, size_t &&matchGroup , std::vector<std::string> &vector){
+inline void copy_template(std::string& string, std::regex &regexp, size_t &&matchGroup , std::vector<std::string> &stringVector){
     std::copy(
-        std::sregex_token_iterator(string.begin(), string.end(), regexp, matchGroup),
-        std::sregex_token_iterator(),
-        std::back_inserter(vector)
+        std::sregex_token_iterator(string.begin(), string.end(), regexp, matchGroup), //有效迭代器 代表first
+        std::sregex_token_iterator(), //空迭代器 代表范围的终止 last
+        //相当于旧容器的起始与终止
+        std::back_inserter(stringVector) //获取到的值操作
     );
 }
 
@@ -55,9 +56,9 @@ inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkV
 
     copy_template(Information,HTMLLinkReg,1,LinkVector);
 
-    for(auto &i:LinkVector){
+    for(auto &currentLink:LinkVector){
         std::copy( //STL -> copy
-            std::sregex_token_iterator(i.begin(), i.end(), HTMLDiskReg, 2),
+            std::sregex_token_iterator(currentLink.begin(), currentLink.end(), HTMLDiskReg, 2),
             std::sregex_token_iterator(),
             std::back_inserter(NameVector)
         );
@@ -87,8 +88,8 @@ inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkV
 
 //    for(auto &Name:NameVector) qDebug("Name:%s",Name.c_str());
 
-    qDebug("the length of SizeVector:%zu",SizeVector.size());
-    qDebug("the length of NameVector:%zu",NameVector.size());
+    // qDebug("the length of SizeVector:%zu",SizeVector.size());
+    // qDebug("the length of NameVector:%zu",NameVector.size());
 
 }
 

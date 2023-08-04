@@ -31,16 +31,15 @@ enum StatusList{
 int PropTaskCount;
 double SpeedCount;
 
-extern Connect Client1;
+extern Connect *Client1;
 extern std::string DownloadPath;
 QList<QString> DownloadSpeedList;
 
 QList<QTreeWidgetItem*> selectedTaskList;
 extern QList<QTreeWidgetItem*> selectedFileList;
 
-QTimer *timer;
+QTimer *DownloadWatcher;
 bool DownloadingStatus = false;
-
 
 PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QWidget(parent),
@@ -62,7 +61,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemPressed,this,&PropertiesWidget::TaskList_Menu); //item按下判断触发
     QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemDoubleClicked,this,&PropertiesWidget::OpenFile);
 
-    QObject::connect(&Client1,&Connect::ProgressUpdate,this,&PropertiesWidget::ProgressUpdate);
+    QObject::connect(Client1,&Connect::ProgressUpdate,this,&PropertiesWidget::ProgressUpdate);
 
     QPushButton *Continued_Button = ui->pushButton_Continue;
     QPushButton *Paused_Button = ui->pushButton_Pause;
@@ -72,7 +71,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QObject::connect(Paused_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
     QObject::connect(Remove_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
 
-    QTimer *timer = new QTimer(this);
+    QTimer *DownloadWatcher = new QTimer(this);
 
     QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemChanged,this,[=]{
         //不知道为什么 但总之itemChanged不会监听delete删除事件
@@ -82,7 +81,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
         if(!PropTaskCount){
             qDebug("new Task Listen Start.");
             PropTaskCount = treeWidgetTaskQueue->topLevelItemCount();
-            timer->start(500); //开启监听 0.5s刷新
+            DownloadWatcher->start(500); //开启监听 0.5s刷新
 
             DownloadingStatus = true;
         }
@@ -91,7 +90,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
             if(treeWidgetTaskQueue->topLevelItemCount()>PropTaskCount){
                 qDebug("Append Task Listen Start.");
                 PropTaskCount = treeWidgetTaskQueue->topLevelItemCount();
-                timer->start(500); //开启监听 0.5s刷新
+                DownloadWatcher->start(500); //开启监听 0.5s刷新
 
                 DownloadingStatus = true;
             }
@@ -101,7 +100,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     });
 
 
-    QObject::connect(timer,&QTimer::timeout,this,[=]{
+    QObject::connect(DownloadWatcher,&QTimer::timeout,this,[=]{
         m_ui->label_DownloadSpeedValue->setText("0"); //default value: 0
 
         QTreeWidgetItem *currentTask;
@@ -129,7 +128,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
         }
 
         else{
-            timer->stop();
+            DownloadWatcher->stop();
             qDebug("下载监控终止");
         }
 
@@ -297,8 +296,6 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTaskList){
 
 }
 
-//signals:
-
 void PropertiesWidget::clearStatusList(){
     qDebug()<<"clearStatusList";
     ui->treeWidgetTaskQueue->clear();
@@ -307,9 +304,17 @@ void PropertiesWidget::clearStatusList(){
 void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
 
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
+    Qt::MatchFlags flag = Qt::MatchExactly;
+    QList matchList = treeWidgetTaskQueue->findItems(Item->text(FilenameList),flag,1);
+
+    //已存在时 跳过创建 (可选)询问是否重新下载
+    if (!matchList.empty()){
+        return;
+    }
 
                                     // Status,  Filename,      Progress,    Size,      Speed,DateTime,     storagePath
     QList<QString> newItemInformation{"Pending",Item->text(FilenameList),"Progress",Item->text(2),"—","DateTime",QString::fromStdString(DownloadPath)};
+
 
     ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
 
@@ -318,7 +323,7 @@ void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
 
 }
 
-void PropertiesWidget::ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSize,const QString& itemSpeed,const QString& itemLink){
+void PropertiesWidget::ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSpeed){
 
     //qDebug() << "from thread slot:" << QThread::currentThreadId();
 

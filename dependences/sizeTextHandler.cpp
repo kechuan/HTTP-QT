@@ -17,18 +17,14 @@ double StringToSize(std::string &SizeText){
     std::string flitterType;
 
     if(matches[1].length()){
-        qDebug()<<"size Reg:";
         flitterType = std::move(matches[1]); //captureList group1
-
-        qDebug("Storage matches[1]:%s",matches[1].str().c_str());
+        qDebug("Storage matches Type [1]:%s",matches[1].str().c_str());
     }
 
     else{
-        qDebug()<<"speed Reg:";
-
         std::regex_search(SizeText, matches, speedReg);
         flitterType = std::move(matches[1]);
-        qDebug("Speed matches[1]:%s",matches[1].str().c_str());
+//        qDebug("Speed matches[1]:%s",matches[1].str().c_str());
     }
 
     

@@ -11,6 +11,7 @@
 #include "./dependences/sizeTextHandler.h"
 
 #include <QTimer>
+#include <ctime>
 
 using namespace httplib;
 
@@ -26,7 +27,10 @@ extern int Port;
 QTimer *UpdateProgressTimer;
 bool UpdateProgressFlag = false;
 
-Connect::Connect(){
+clock_t start_t;
+clock_t finish_t;
+
+Connect::Connect(Ui::MainWindow *m_ui):m_ui(m_ui){
     qDebug() << "Connect ID:" << QThread::currentThreadId();
     UpdateProgressTimer = new QTimer(this);
 
@@ -53,7 +57,7 @@ bool Connect::cliPing(){
     if(auto res = cli.Post("/ping")){ //用if包裹其中 让其变为自动的0/1判断返回 因为res超时响应就会被赋予"0"
         if( res->status == 200){
             qDebug()<<"succ";
-            //httplib的res返回就两种 status与DownloadContent
+            //httplib的res返回就两种 status与body
             qDebug("%s",res->body.c_str());
             return true;
         }
@@ -140,21 +144,55 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     float RecordProgress = 0;
     double SpeedValue = 0;
 
+    //一般 string 的处理 因为其成员函数是append 则天生为复制一份再写入
+
+    /*
+        对于大型字符串，这可能会导致较大的性能开销。
+        这涉及到内存复制和内存分配，可能导致动态内存分配和数据的复制。
+    */
     std::string DownloadContent;
+
+    //那么如果我用emplace_back呢?
+    std::vector<std::string> DownloadContentVector;
+
+    start_t = clock();
 
     QTimer::singleShot(0,this,[=]{
         qDebug() << "UpdateProgressTimer Start ID:" << QThread::currentThreadId();
         UpdateProgressTimer->start(500);
     });
 
+    double totalSize = 0;
+    int VectorSize = 0;
+
     auto res = cli.Get(itemLink.toStdString(),
       [&](const char *data, size_t data_length) {
-        DownloadContent.append(std::move(data), data_length);
-        FProgress = (DownloadContent.size()*100/fliterSize);
 
+        //原型: std::string& append(const char* data, size_t data_length);
+        //意思是将 data的 前data_length位 添加到末尾
+
+        DownloadContentVector.emplace_back(std::move(data), data_length);
         QString itemSpeed;
 
         if(UpdateProgressFlag){
+
+            if(!VectorSize){
+                for (const std::string& str : DownloadContentVector) {
+                    totalSize += str.size();
+                }
+                VectorSize = DownloadContentVector.size();   //end Size
+                qDebug("totalSize:%f , VectorSize:%d",totalSize,VectorSize);
+            }
+
+            else{
+                for (int Loop = VectorSize; Loop < DownloadContentVector.size(); ++Loop) {
+                    totalSize += DownloadContentVector[VectorSize].size();
+                }
+                VectorSize = DownloadContentVector.size();
+                qDebug("totalSize:%f , VectorSize:%d",totalSize,VectorSize);
+            }
+
+            FProgress = (totalSize*100/fliterSize);
 
             //inital Speed
             if(!RecordProgress){
@@ -171,7 +209,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
 
             itemSpeed = QString::fromStdString(SizeToString(SpeedValue));
 
-            emit ProgressUpdate(itemName,FProgress,itemSize,itemSpeed,itemLink);
+            emit ProgressUpdate(itemName,FProgress,itemSpeed);
 
         }
 
@@ -181,13 +219,25 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
        return true;
     });
 
-    emit ProgressUpdate(itemName,FProgress,itemSize,"—",itemLink);
+    //迁移回std::string
+    for(std::string& Data:DownloadContentVector){
+        DownloadContent.append(std::move(Data));
+    }
+
+    DownloadContentVector.shrink_to_fit();
+
+    finish_t = clock();
+    double total_t = (double)(finish_t - start_t) / CLOCKS_PER_SEC;//将时间转换为秒
+    qDebug("CPU 占用的总时间:%f\n", total_t);
+
+    emit ProgressUpdate(itemName,100,"—");
 
     qDebug("Connect.cpp Line 186:FileSize:%zu",DownloadContent.size());
 
     QTimer::singleShot(0,this,[=]{
         qDebug() << "UpdateProgressTimer stop ID:" << QThread::currentThreadId();
         UpdateProgressTimer->stop();
+        m_ui->textBrowser_log->append(R"(<span style=" color:#ffffff;">)"+itemName+R"( Download Succ.</span>)");
     });
 
     WriteToFile(Fullpath,fileName,DownloadContent);

@@ -7,11 +7,18 @@
 #include <QObject>
 #include <QFileInfo>
 
+/*
+测试 如果仅引入ui文件 能不能令非ui体系 仅仅只是QObject能不能直接操纵引入的ui布局。
+
+*/
+
+#include "ui_mainwindow.h"
+
 
 class Connect:public QObject{
     Q_OBJECT
 public:
-    Connect();
+    Connect(Ui::MainWindow *m_ui = nullptr);
 
     bool cliPing();
 
@@ -29,8 +36,12 @@ public:
 private:
     void Abort();
 
+    Ui::MainWindow *m_ui;
+
 signals:
-    void ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSize,const QString& itemSpeed,const QString& itemLink);
+//    void ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSize,const QString& itemSpeed,const QString& itemLink);
+    void ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSpeed);
+
     void DownloadSpeedUpdate(float& bodySize);
     void Downloading(std::map<std::string,int> &TaskMap,std::string& Name,int &Progress);
 

@@ -140,8 +140,10 @@ void IP_controlPanel::action_pressed(){
 //快捷键定义区
 void IP_controlPanel::keyPressEvent(QKeyEvent *event){
     switch(event->key()){
-        case Qt::Key_Return: {
-            emit ui->pushButton_Connect->pressed();
+        case Qt::Key_Return:
+        case Qt::Key_Enter:
+        {
+            emit ui->pushButton_Connect->released();
             qDebug("IP_controlPanel return pressed");
             break;
         }

@@ -2,6 +2,7 @@
 #include "./ui_mainwindow.h"
 
 #include "./dependences/HTMLFliter.h"
+#include "FileList.h"
 
 #include "connect.h"
 
@@ -46,7 +47,7 @@ bool m_status = false;
 short SplitterRecord;
 
 //全局对象 创立
-Connect Client1;
+Connect *Client1;
 FileList *SurfingFile;
 
 QList<QTreeWidgetItem*> selectedFileList;
@@ -64,6 +65,8 @@ MainWindow::MainWindow(QWidget *parent)
     AboutWindow->hide();
 
     IP_controlPanelWindow = new IP_controlPanel(nullptr,ui);
+    Client1 = new Connect(ui);
+
 
     //延迟弹出 以便弹窗后置在主程序
     QTimer::singleShot(800,this,[&](){qDebug()<<"IP_show ID:"<<QThread::currentThreadId();IP_controlPanelWindow->show();});
@@ -248,7 +251,7 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(this,&MainWindow::DockProgressCreate,DockWidget,&PropertiesWidget::ProgressCreate);
 
     //对于静态对象 想融入进QObject的*sender 只需要继承了QObject之后 使用取地址符变成指向地址就好
-    QObject::connect(&Client1,&Connect::DownloadSpeedUpdate,this,[this](float bodySize){
+    QObject::connect(Client1,&Connect::DownloadSpeedUpdate,this,[this](float bodySize){
         ui->label_DownloadSpeedValue->setText(
             QString::fromStdString(
                 std::to_string(bodySize).substr(0,6) // 123.45
@@ -276,8 +279,8 @@ MainWindow::MainWindow(QWidget *parent)
 //    QPoint InitalRelButtonPos = pushButton_MaxThreadCount->mapFromGlobal(InitalAbsButtonPos);
 //    QPoint InitalRelLabelPos = label_MaxThreadCountValue->mapFromGlobal(InitalAbsLabelPos);
 
-    //目标运动结束后的相对位置
-    QPoint TargetRelButtonPos = QPoint(159,10);
+    //目标运动结束后的相对位置 在Qpoint里默认以左上角为起始地址计算
+    QPoint TargetRelButtonPos = QPoint(159,12);
     QPoint TargetRelLabelPos = QPoint(235,9);
 
     //相对位置转化为绝对目标位置 相对->绝对
@@ -310,7 +313,7 @@ MainWindow::MainWindow(QWidget *parent)
         //pos改变之后 其他所有pos全部都跟着变 导致原有设置的hide show 以及动画带来的pos修改 全部重置
 
         FadingSlider->setEndValue(1.0);
-        FadingButton->setEndValue(QPoint(4,10));
+        FadingButton->setEndValue(QPoint(4,12));
         FadingLabel->setEndValue(QPoint(80,9));
 
         MaxThreadAnimation->start();
@@ -319,8 +322,8 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     QObject::connect(ThreadsSlider,&QSlider::sliderMoved,this,[=](int number){
+        //神奇的是 在setText的过程中 似乎触发了。。类似DOM刷新的机制 让UI重绘了字体 导致字体的位置变回去了
         label_MaxThreadCountValue->setText(QString::fromStdString(std::to_string(number)));
-//        label_DownloadSpeedValue->setText(QString::fromStdString(std::to_string(number)));
     });
 
     QObject::connect(ThreadsSlider,&QSlider::sliderReleased,this,[=]{
@@ -578,7 +581,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
                             QString selectedName = selectedItem->text(nameList);
                             QString selectedSize = selectedItem->text(sizeList);
                             QString selectedLink = selectedItem->text(linkList);
-                            Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
+                            Client1->cliFileDownload(selectedName,selectedSize,selectedLink);
                         }));
 
                         QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
@@ -595,7 +598,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
                             QString selectedName = selectedItem->text(nameList);
                             QString selectedSize = selectedItem->text(sizeList);
                             QString selectedLink = selectedItem->text(linkList);
-                            Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
+                            Client1->cliFileDownload(selectedName,selectedSize,selectedLink);
                         }));
 
                         QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
@@ -624,7 +627,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
                         QString selectedName = selectedItem->text(nameList);
                         QString selectedSize = selectedItem->text(sizeList);
                         QString selectedLink = selectedItem->text(linkList);
-                        Client1.cliFileDownload(selectedName,selectedSize,selectedLink);
+                        Client1->cliFileDownload(selectedName,selectedSize,selectedLink);
                     }));
 
                     QObject::connect(&insideWatcher,&QFutureWatcher<void>::finished,&insideLoop,&QEventLoop::quit);
@@ -645,7 +648,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
             emit DockProgressCreate(listItem);
 
             qDebug("you selected the %s,which size is:%s",selectedFileListsName.toStdString().c_str(),selectedFileListsSize.toStdString().c_str());
-            DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,&Client1,std::ref(selectedFileListsName),std::ref(selectedFileListsSize),std::ref(selectedFileListsLink)));
+            DownloadWatcher.setFuture(QtConcurrent::run(&Connect::cliFileDownload,Client1,std::ref(selectedFileListsName),std::ref(selectedFileListsSize),std::ref(selectedFileListsLink)));
             QObject::connect(&DownloadWatcher,&QFutureWatcher<void>::finished,&DownloadLoop,&QEventLoop::quit);
             DownloadLoop.exec();
 
@@ -656,7 +659,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
    else{
        qDebug("double clicked the itemName %s, it linked to:%s",selectedFileListsName.toStdString().c_str(),selectedFileListsLink.toStdString().c_str()); //colnmun指代 子信息
-       std::string Information = Client1.cliFileSurfing(selectedFileListsLink);
+       std::string Information = Client1->cliFileSurfing(selectedFileListsLink);
 
        HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
 
@@ -679,7 +682,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         if(selectedFileListsName==".."&&selectedFileListsLink==rootPath){
            qDebug("redirect to the disk select.");
 
-           Information = Client1.cliFileSurfing(rootPath);
+           Information = Client1->cliFileSurfing(rootPath);
            HTMLExtract(Information,LinkVector,NameVector);
 
            for(int index = 0;index<=NameVector.size()-1;++index){
@@ -749,7 +752,7 @@ void MainWindow::Rename(QTreeWidgetItem *listItem){
     qDebug("Ask Server to Rename item:%s->%s",listItem->text(nameList).toStdString().c_str(),newFileName.toStdString().c_str());
 
     if(!newFileName.isEmpty()){
-        Client1.cliFileRename(oldItem,newFileName);
+        Client1->cliFileRename(oldItem,newFileName);
     }
 
     else{
@@ -796,7 +799,7 @@ void MainWindow::Delete(){
         for(auto& List:selectedFileList){
             delete List;
         }
-        Client1.cliFileDelete(LinkList);
+        Client1->cliFileDelete(LinkList);
     }
 
     else if(RemoteDeletePrompt.clickedButton() == DiscardButton){
@@ -811,7 +814,7 @@ void MainWindow::Refresh(){
     QList<QString> newItemInformation{"-","..","—",ParentPath};
     SurfingFile->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
-    std::string Information = Client1.cliFileSurfing(SurfingPath);
+    std::string Information = Client1->cliFileSurfing(SurfingPath);
 
     HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
 
@@ -848,7 +851,7 @@ void MainWindow::Upload(){
     }
 
     QString UploadPath = SurfingPath.split("?path=").at(1);
-    Client1.cliFileUpload(UploadPath); //注意 SurfingPath => http://....?path= 是不能直接用在cliFileUpload的req.params里的
+    Client1->cliFileUpload(UploadPath); //注意 SurfingPath => http://....?path= 是不能直接用在cliFileUpload的req.params里的
 
     }
 }
@@ -864,7 +867,7 @@ void MainWindow::Upload(QList<QUrl>& DropList){
     }
 
     QString UploadPath = SurfingPath.split("?path=").at(1);
-    Client1.cliFileUpload(UploadPath); //注意 SurfingPath => http://....?path= 是不能直接用在cliFileUpload的req.params里的
+    Client1->cliFileUpload(UploadPath); //注意 SurfingPath => http://....?path= 是不能直接用在cliFileUpload的req.params里的
 
 }
 
@@ -938,8 +941,10 @@ void MainWindow::keyPressEvent(QKeyEvent *event){
     QList<QTreeWidgetItem*> selectedTreeWidgetItems = SurfingFile->selectedItems();
 
     switch(event->key()){
-        case Qt::Key_Return: {
-                emit SurfingFile->itemDoubleClicked(selectedTreeWidgetItems.at(0), 0); //因为判断方式已经变更成selectedTreeWidgetItems了 因此简化掉for循环
+        case Qt::Key_Return:
+        case Qt::Key_Enter:
+        {
+            emit SurfingFile->itemDoubleClicked(selectedTreeWidgetItems.at(0), 0); //因为判断方式已经变更成selectedTreeWidgetItems了 因此简化掉for循环
             break;
         }
 

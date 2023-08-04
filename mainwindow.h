@@ -8,15 +8,11 @@
 #include "ip_controlpanel.h" //sub .h include done.
 #include "propertieswidget.h"
 
-#include "FileList.h"
-
 QT_BEGIN_NAMESPACE
 namespace Ui { 
     class MainWindow;
 }
 QT_END_NAMESPACE
-
-extern FileList *SurfingFile;
 
 class MainWindow : public QMainWindow
 {

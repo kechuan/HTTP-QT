@@ -40,15 +40,6 @@ FileList::~FileList(){
     qDebug("FileList deleted");
 }
 
-//void FileList::mousePressEvent(QMouseEvent *mousePressEvent){
-//    dragStartPosition = mousePressEvent->pos();
-
-//    if (!(mousePressEvent->buttons() & Qt::LeftButton)) return; //非左键屏蔽
-//    if ((mousePressEvent->pos() - dragStartPosition).manhattanLength() < qApp->startDragDistance()){
-
-//    } //滑动距离屏蔽 转变为正常单击
-//}
-
 void FileList::mouseMoveEvent(QMouseEvent *mouseMoveEvent){
 
     selectedFileList = this->selectedItems();
@@ -65,9 +56,6 @@ void FileList::mouseMoveEvent(QMouseEvent *mouseMoveEvent){
     //    drag->setHotSpot(mouseMoveEvent->pos());
 
     drag->exec(Qt::CopyAction | Qt::MoveAction, Qt::CopyAction);
-
-    // if button is dropped out of panel (e.g. on desktop)
-    // it is not deleted automatically by Qt
 
 }
 

@@ -5,8 +5,6 @@
 #include <QList>
 #include <QUrl>
 
-//#include "ui_mainwindow.h"
-
 class FileList:public QTreeWidget{
     Q_OBJECT
 public:

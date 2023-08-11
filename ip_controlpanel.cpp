@@ -181,8 +181,7 @@ void IP_controlPanel::action_pressed(){
             qDebug()<<"connect Abort.";
             ui->pushButton_Connect->setEnabled(true);
 
-            //这里应该放一下http库里的强制终止任何现在的行为 下载/上传 以及请求网页的操作 等等等等
-
+            ParentPath = nullptr; //擦除信息
             SurfingFile->clear();
             QList<QString> newItemInformation{"To start","please config","setting->IP control Panel",""};
             SurfingFile->addTopLevelItem(new QTreeWidgetItem(newItemInformation));

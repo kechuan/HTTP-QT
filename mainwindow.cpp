@@ -394,8 +394,9 @@ qapplication
 */
 
 bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
-    //那么其逻辑实际上等于 treewidgetitem作用域+全局右键判断
+    //那么其逻辑实际上等于 treewidgetitem作用域+右键判断
     if(qApp->mouseButtons() != Qt::RightButton) return false;
+    if(ParentPath.isEmpty()) return false; //未获取目录信息前直接抛出
 
     qDebug()<<"right triggered";
 
@@ -418,6 +419,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
     FileList_popmenu->addAction(Upload);
 
     if(ParentPath == rootPath) Refresh->setEnabled(false); //不要在磁盘界面选择刷新
+
 
     //signal Trigger add.
     QObject::connect(
@@ -553,6 +555,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
 void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
 //这里的column代表这一行里点击的位置判定(Icon->0/FileName->1/Size->2...) 不过我并没有对column作出什么更改需求
+    if(ParentPath.isEmpty()) return;
 
 //  QString selectedFileListsIcon = listItem->text(iconList);
     QString selectedFileListsName = listItem->text(nameList);

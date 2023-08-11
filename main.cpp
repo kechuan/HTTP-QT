@@ -24,9 +24,10 @@ int main(int argc, char *argv[])
         }
     }
 
-     MainWindow w;
-     w.show();
-
+    MainWindow w;
+    QIcon Title = QIcon(":/icon/Icon.ico");
+    w.setWindowIcon(Title);
+    w.show();
 
     return a.exec();
 }

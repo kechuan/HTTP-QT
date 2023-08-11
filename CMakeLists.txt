@@ -17,8 +17,6 @@ link_directories(D:/cpp/dependences/mingw-lib/)
 
 set(TS_FILES HTTP-QT_zh_CN.ts)
 
-
-
 set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp mainwindow.h mainwindow.ui

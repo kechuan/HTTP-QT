@@ -9,6 +9,7 @@
 #include <QHeaderView>
 
 extern QList<QTreeWidgetItem*> selectedFileList;
+extern QString ParentPath;
 
 QPoint dragStartPosition;
 
@@ -50,7 +51,7 @@ void FileList::mouseMoveEvent(QMouseEvent *mouseMoveEvent){
     mimeData->setData("application/x-qwidget",QByteArray::number((quintptr)this)); //将this指针转化为quintptr 挂上x-qwidget标签
 
     drag->setMimeData(mimeData);
-    drag->setPixmap(QPixmap("./images/Icon.ico"));
+    drag->setPixmap(QPixmap(":/icon/Icon.ico"));
 
     //热点基本上定义了拖动操作正在进行时拖动的像素图应位于的位置(固定)
     //    drag->setHotSpot(mouseMoveEvent->pos());
@@ -64,6 +65,8 @@ void FileList::dragMoveEvent(QDragMoveEvent *dragMoveEvent){
 }
 
 void FileList::dragEnterEvent(QDragEnterEvent *dragEnterEvent){
+
+    if(ParentPath.isEmpty()) dragEnterEvent->ignore(); //未获取目录信息前直接抛出)
 
     if(dragEnterEvent->mimeData()->hasUrls()){
         dragEnterEvent->acceptProposedAction();

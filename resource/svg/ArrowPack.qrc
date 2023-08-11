@@ -6,4 +6,7 @@
         <file>icon-Remove.svg</file>
         <file>icon-Continue.svg</file>
     </qresource>
+    <qresource prefix="/icon">
+        <file>Icon.ico</file>
+    </qresource>
 </RCC>

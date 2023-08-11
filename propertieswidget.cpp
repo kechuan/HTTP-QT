@@ -33,6 +33,8 @@ double SpeedCount;
 
 extern Connect *Client1;
 extern std::string DownloadPath;
+extern QString ParentPath;
+
 QList<QString> DownloadSpeedList;
 
 QList<QTreeWidgetItem*> selectedTaskList;
@@ -494,6 +496,7 @@ void PropertiesWidget::dragMoveEvent(QDragMoveEvent *dragMoveEvent){
 }
 
 void PropertiesWidget::dragEnterEvent(QDragEnterEvent *dragEnterEvent){
+    if(ParentPath.isEmpty()) return;
 
     if(dragEnterEvent->mimeData()->hasFormat("application/x-qwidget")){
         dragEnterEvent->acceptProposedAction();

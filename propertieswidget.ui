@@ -74,7 +74,7 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_Function">
         <property name="spacing">
-         <number>7</number>
+         <number>12</number>
         </property>
         <property name="topMargin">
          <number>6</number>
@@ -85,21 +85,21 @@
         <item>
          <widget class="QPushButton" name="pushButton_Continue">
           <property name="text">
-           <string>Continue</string>
+           <string/>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="pushButton_Pause">
           <property name="text">
-           <string>Pause</string>
+           <string/>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="pushButton_Remove">
           <property name="text">
-           <string>Remove</string>
+           <string/>
           </property>
          </widget>
         </item>

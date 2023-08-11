@@ -216,20 +216,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
               <bold>true</bold>
              </font>
             </property>
-            <property name="cursor">
-             <cursorShape>PointingHandCursor</cursorShape>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">QPushButton{
-border:none;
-background:none
-}
-
-QPushButton:pressed{
-	border: none;
-	background: none;
-}</string>
-            </property>
             <property name="text">
              <string>MaxThread</string>
             </property>

@@ -34,6 +34,58 @@ IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
     QObject::connect(ui->pushButton_Connect,SIGNAL(released()),this,SLOT(action_pressed()));
     QObject::connect(ui->pushButton_Abort,SIGNAL(released()),this,SLOT(action_pressed()));
 
+    QPushButton *pushButton_collapse = ui->pushButton_collapse;
+
+    pushButton_collapse->setStyleSheet(R"(
+        QPushButton{
+            border:none;
+            background:none
+        }
+
+        QPushButton:pressed{
+            border: none;
+            background: none;
+        }
+    )");
+
+    //根据qrc文件下的描述确立路径 :/svg/ArrowPack/...
+    QIcon rightArrow = QIcon(":/svg/ArrowPack/icon-rightArrow.svg");
+    pushButton_collapse->setIcon(rightArrow);
+
+
+    QObject::connect(pushButton_collapse,&QPushButton::clicked,this,[=]{
+        if (ui->label_username->isHidden()) {
+
+            ui->label_username->setVisible(true);
+            ui->label_password->setVisible(true);
+
+            ui->lineEdit_username->setVisible(true);
+            ui->lineEdit_password->setVisible(true);
+
+            QIcon downArrow = QIcon(":/svg/ArrowPack/icon-downArrow.svg");
+            pushButton_collapse->setIcon(downArrow);
+
+        }
+
+        else {
+            ui->label_username->setVisible(false);
+            ui->label_password->setVisible(false);
+
+            ui->lineEdit_username->setVisible(false);
+            ui->lineEdit_password->setVisible(false);
+
+            QIcon rightArrow = QIcon(":/svg/ArrowPack/icon-rightArrow.svg");
+            pushButton_collapse->setIcon(rightArrow);
+        }
+    });
+
+    ui->label_username->setVisible(false);
+    ui->label_password->setVisible(false);
+
+    ui->lineEdit_username->setVisible(false);
+    ui->lineEdit_password->setVisible(false);
+    ui->lineEdit_password->setEchoMode(QLineEdit::Password);
+
     QObject::connect(ui->lineEdit_IP_1,&QLineEdit::textChanged,this,[this]{
         if(ui->lineEdit_IP_1->text().toInt()>255){
             ui->lineEdit_IP_1->setText("255");
@@ -97,11 +149,16 @@ void IP_controlPanel::action_pressed(){
             if(Client1.cliPing()){
                 log_view->append(R"(<span style=" color:#ffffff;">Ping Succ</span>)");
 
+                if(!ui->lineEdit_username->text().isEmpty()){
+                    qDebug("username:%s",ui->lineEdit_username->text().toStdString().c_str());
+                    qDebug("password:%s",ui->lineEdit_password->text().toStdString().c_str());
+                }
+
                 std::string Information = Client1.cliFileSurfing();
                 HTMLExtract(Information,LinkVector,NameVector);
 
                 SurfingFile->clear();
-                emit connetPressed(); //触发信号
+                emit connetPressed();
 
                 for(int index = 0;index<=NameVector.size()-1;index++){
                     QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
@@ -111,7 +168,6 @@ void IP_controlPanel::action_pressed(){
 
                 ui->pushButton_Connect->setEnabled(false);
                 QWidget::close(); //原来如此 widget是有直接close的功能的 应该等效于点X关闭。。
-
 
             }
 

@@ -39,7 +39,7 @@ Connect::Connect(Ui::MainWindow *m_ui):m_ui(m_ui){
     });
 }
 
-void WriteToFile(std::string DownloadPath,std::string& FileName,std::string& Data); //预声明
+void WriteToFile(std::string DownloadPath,std::string& FileName,std::string_view& Data); //预声明
 
 void Connect::Abort(){
     qDebug()<<"connect Abort.";
@@ -66,6 +66,7 @@ bool Connect::cliPing(){
 
     else{
         auto err = res.error();
+        //httplib.h 重载了to_string的功能 使其从枚举转化对应为 string
         qDebug("err code:%d, Information:%s",err,to_string(err).c_str());
     }
 
@@ -100,7 +101,7 @@ std::string Connect::cliFileSurfing(QString& Postition){
 
 
 
-void WriteToFile(std::string path,std::string& FileName,std::string& Data){ //overload
+void WriteToFile(std::string path,std::string& FileName,std::string_view& Data){ //overload
     qDebug("Connect.cpp Line 91: path:%s",path.c_str());
 
     //方案一 将string转成wchar_t
@@ -144,16 +145,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     float RecordProgress = 0;
     double SpeedValue = 0;
 
-    //一般 string 的处理 因为其成员函数是append 则天生为复制一份再写入
-
-    /*
-        对于大型字符串，这可能会导致较大的性能开销。
-        这涉及到内存复制和内存分配，可能导致动态内存分配和数据的复制。
-    */
     std::string DownloadContent;
-
-    //那么如果我用emplace_back呢?
-    std::vector<std::string> DownloadContentVector;
 
     start_t = clock();
 
@@ -168,32 +160,13 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     auto res = cli.Get(itemLink.toStdString(),
       [&](const char *data, size_t data_length) {
 
-        //原型: std::string& append(const char* data, size_t data_length);
-        //意思是将 data的 前data_length位 添加到末尾
+        DownloadContent.append(std::move(data),data_length);
 
-        DownloadContentVector.emplace_back(std::move(data), data_length);
         QString itemSpeed;
 
         if(UpdateProgressFlag){
 
-            if(!VectorSize){
-                for (const std::string& str : DownloadContentVector) {
-                    totalSize += str.size();
-                }
-                VectorSize = DownloadContentVector.size();   //end Size
-                qDebug("totalSize:%f , VectorSize:%d",totalSize,VectorSize);
-            }
-
-            else{
-                for (int Loop = VectorSize; Loop < DownloadContentVector.size(); ++Loop) {
-                    totalSize += DownloadContentVector[VectorSize].size();
-                }
-                VectorSize = DownloadContentVector.size();
-                qDebug("totalSize:%f , VectorSize:%d",totalSize,VectorSize);
-            }
-
-            FProgress = (totalSize*100/fliterSize);
-
+            FProgress = (DownloadContent.size()*100/fliterSize);
             //inital Speed
             if(!RecordProgress){
                 RecordProgress = FProgress;
@@ -219,20 +192,16 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
        return true;
     });
 
-    //迁移回std::string
-    for(std::string& Data:DownloadContentVector){
-        DownloadContent.append(std::move(Data));
-    }
-
-    DownloadContentVector.shrink_to_fit();
-
     finish_t = clock();
     double total_t = (double)(finish_t - start_t) / CLOCKS_PER_SEC;//将时间转换为秒
     qDebug("CPU 占用的总时间:%f\n", total_t);
 
-    emit ProgressUpdate(itemName,100,"—");
+    FProgress = (DownloadContent.size()*100/fliterSize);
+    emit ProgressUpdate(itemName,FProgress,"—");
 
     qDebug("Connect.cpp Line 186:FileSize:%zu",DownloadContent.size());
+
+    std::string_view DownloadContentView(DownloadContent);
 
     QTimer::singleShot(0,this,[=]{
         qDebug() << "UpdateProgressTimer stop ID:" << QThread::currentThreadId();
@@ -240,7 +209,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
         m_ui->textBrowser_log->append(R"(<span style=" color:#ffffff;">)"+itemName+R"( Download Succ.</span>)");
     });
 
-    WriteToFile(Fullpath,fileName,DownloadContent);
+    WriteToFile(Fullpath,fileName,DownloadContentView);
 
 }
 
@@ -292,10 +261,6 @@ void Connect::cliFileUpload(QString& QTargetPosition){
             auto upload = cli.Post("/upload/"+TargetPosition, items);
         }
     }
-
-
-
-
 
 }
 

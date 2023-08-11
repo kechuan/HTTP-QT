@@ -5,6 +5,7 @@
 #include "FileList.h"
 
 #include "connect.h"
+#include "ui_propertieswidget.h"
 
 #include <string>
 #include <vector>
@@ -88,8 +89,6 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(FileShare_Splitter,&QSplitter::splitterMoved,this,[=](){
         ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
         SurfingFile->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
-
-//        ui->statusShow->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
         DockWidget->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
 
         qDebug("Prop 1 Height:%d",FileShare_Splitter->widget(0)->size().height());
@@ -265,6 +264,21 @@ MainWindow::MainWindow(QWidget *parent)
     QPushButton *pushButton_MaxThreadCount = ui->pushButton_MaxThreadCount;
     QSlider *ThreadsSlider = ui->horizontalSlider_MaxThreadCount;
     QLabel *label_MaxThreadCountValue = ui->label_MaxThreadCountValue;
+
+
+    pushButton_MaxThreadCount->setStyleSheet(R"(
+        QPushButton{
+            border:none;
+            background:none
+        }
+
+        QPushButton:pressed{
+            border: none;
+            background: none;
+        }
+    )");
+
+    pushButton_MaxThreadCount->setCursor(Qt::PointingHandCursor);
 
 
     QParallelAnimationGroup *MaxThreadAnimation = new QParallelAnimationGroup(this);
@@ -563,13 +577,38 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
             int batch = 0;
             QList<QTreeWidgetItem *> TempList;
 
-            for(auto Item:selectedFileList){
-                emit DockProgressCreate(Item);
+
+            for(auto &Item:selectedFileList){
+                QTreeWidget *treeWidgetTaskQueue = DockWidget->ui->treeWidgetTaskQueue;
+                QList matchList = treeWidgetTaskQueue->findItems(Item->text(nameList),Qt::MatchExactly,1);
+
+                if (!matchList.empty()){
+                    QMessageBox ReDownloadPrompt;
+
+                    ReDownloadPrompt.setWindowTitle("重复下载确认");
+                    ReDownloadPrompt.setText("你的下载列表已存在该文件:"+Item->text(nameList)+"\n是否要重新下载?");
+
+                    QPushButton *AcceptButton = ReDownloadPrompt.addButton("Accept",QMessageBox::AcceptRole);
+                    QPushButton *DeniedButton = ReDownloadPrompt.addButton("Cancel",QMessageBox::NoRole);
+
+                    ReDownloadPrompt.exec();
+
+                    if(ReDownloadPrompt.clickedButton() == DeniedButton){
+                        selectedFileList.remove(selectedFileList.indexOf(Item));
+                        continue;
+                    }
+
+                    if(ReDownloadPrompt.clickedButton() == AcceptButton){
+                        emit DockProgressCreate(Item);
+                    }
+
+                }
+
             }
 
 
             while(batch*DownloadPool.maxThreadCount()<selectedFileList.size()){
-                int residual =  selectedFileList.size()-batch*DownloadPool.maxThreadCount();
+                int residual = selectedFileList.size()-batch*DownloadPool.maxThreadCount();
 
                 if(selectedFileList.size()-batch*DownloadPool.maxThreadCount()<DownloadPool.maxThreadCount()){
                     if(residual>1){
@@ -581,6 +620,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
                             QString selectedName = selectedItem->text(nameList);
                             QString selectedSize = selectedItem->text(sizeList);
                             QString selectedLink = selectedItem->text(linkList);
+
                             Client1->cliFileDownload(selectedName,selectedSize,selectedLink);
                         }));
 
@@ -645,6 +685,26 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
         }
 
         else{
+
+            QTreeWidget *treeWidgetTaskQueue = DockWidget->ui->treeWidgetTaskQueue;
+            QList matchList = treeWidgetTaskQueue->findItems(listItem->text(nameList),Qt::MatchExactly,1);
+
+            if (!matchList.empty()){
+                QMessageBox ReDownloadPrompt;
+
+                ReDownloadPrompt.setWindowTitle("重复下载确认");
+                ReDownloadPrompt.setText("你的下载列表已存在该文件:"+listItem->text(nameList)+"\n是否要重新下载?");
+                ReDownloadPrompt.addButton("Accept",QMessageBox::AcceptRole);
+
+                QPushButton *DeniedButton = ReDownloadPrompt.addButton("Cancel",QMessageBox::NoRole);
+
+                ReDownloadPrompt.exec();
+
+                if(ReDownloadPrompt.clickedButton() == DeniedButton) return;
+
+            }
+
+
             emit DockProgressCreate(listItem);
 
             qDebug("you selected the %s,which size is:%s",selectedFileListsName.toStdString().c_str(),selectedFileListsSize.toStdString().c_str());
@@ -664,9 +724,17 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
        HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector);
 
        if(PathVector.size()>1){
+
+            /*
+             *  D:
+             *  D:/Downloads         -2
+                D:/Downloads/xxx.jpg .back() = index.last()
+
+            */
+
             qDebug("上一级Path:%s",PathVector.at(PathVector.size()-2).c_str());
             ParentPath = PathVector.at(PathVector.size()-2).c_str();
-            SurfingPath = PathVector.at(PathVector.size()-1).c_str();
+            SurfingPath = PathVector.back().c_str();
         }
 
         else{

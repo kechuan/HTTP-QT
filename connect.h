@@ -9,7 +9,6 @@
 
 /*
 测试 如果仅引入ui文件 能不能令非ui体系 仅仅只是QObject能不能直接操纵引入的ui布局。
-
 */
 
 #include "ui_mainwindow.h"

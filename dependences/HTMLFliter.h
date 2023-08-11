@@ -64,8 +64,8 @@ inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkV
         );
     }
 
-
 }
+
 
 inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, std::vector<std::string> &PathVector, std::vector<std::string> &NameVector, std::vector<std::string> &SizeVector){
 

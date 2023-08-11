@@ -63,9 +63,40 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
 
     QObject::connect(Client1,&Connect::ProgressUpdate,this,&PropertiesWidget::ProgressUpdate);
 
+    QFrame *frame_TaskQueue = ui->frame_TaskQueue;
+
+    frame_TaskQueue->setStyleSheet(R"(
+        QPushButton{
+            border:none;
+            background:none
+        }
+
+        QPushButton:pressed{
+            border: none;
+            background: none;
+        }
+    )");
+
+
     QPushButton *Continued_Button = ui->pushButton_Continue;
     QPushButton *Paused_Button = ui->pushButton_Pause;
     QPushButton *Remove_Button = ui->pushButton_Remove;
+
+    QIcon ContinueIcon = QIcon(":/svg/ArrowPack/icon-Continue.svg");
+    QIcon PauseIcon = QIcon(":/svg/ArrowPack/icon-Pause.svg");
+    QIcon RemoveIcon = QIcon(":/svg/ArrowPack/icon-Remove.svg");
+
+    Continued_Button->setIconSize(QSize(24,24));
+    Paused_Button->setIconSize(QSize(24,24));
+    Remove_Button->setIconSize(QSize(24,24));
+
+    Continued_Button->setIcon(ContinueIcon);
+    Paused_Button->setIcon(PauseIcon);
+    Remove_Button->setIcon(RemoveIcon);
+
+    Continued_Button->setCursor(Qt::PointingHandCursor);
+    Paused_Button->setCursor(Qt::PointingHandCursor);
+    Remove_Button->setCursor(Qt::PointingHandCursor);
 
     QObject::connect(Continued_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
     QObject::connect(Paused_Button,&QPushButton::clicked,this,&PropertiesWidget::ActionPressed);
@@ -307,7 +338,7 @@ void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
     Qt::MatchFlags flag = Qt::MatchExactly;
     QList matchList = treeWidgetTaskQueue->findItems(Item->text(FilenameList),flag,1);
 
-    //已存在时 跳过创建 (可选)询问是否重新下载
+    //已存在时 跳过创建
     if (!matchList.empty()){
         return;
     }
@@ -411,7 +442,7 @@ void PropertiesWidget::ActionPressed(){
     selectedTaskList = ui->treeWidgetTaskQueue->selectedItems();
     qDebug("selectedLength:%zu",selectedTaskList.length());
 
-    if(button->text() == "Continue"){
+    if(button->objectName() == "pushButton_Continue"){
         for(auto& TreeItem:selectedTaskList){
             if(TreeItem->text(0) == "Finished") continue;
             StatusChanged(Downloading,TreeItem);
@@ -419,7 +450,7 @@ void PropertiesWidget::ActionPressed(){
         return;
     }
 
-    else if(button->text() == "Pause"){
+    else if(button->objectName() == "pushButton_Pause"){
         for(auto& TreeItem:selectedTaskList){
             if(TreeItem->text(0) == "Finished") continue;
             StatusChanged(Paused,TreeItem);

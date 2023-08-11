@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/svg/ArrowPack">
+        <file>icon-downArrow.svg</file>
+        <file>icon-rightArrow.svg</file>
+        <file>icon-Pause.svg</file>
+        <file>icon-Remove.svg</file>
+        <file>icon-Continue.svg</file>
+    </qresource>
+</RCC>

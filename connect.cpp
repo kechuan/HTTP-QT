@@ -5,8 +5,6 @@
 #include <fstream>
 #include <filesystem> //C++ 17 to solve fstream wchar problem.
 
-#include <regex>
-
 #include "./dependences/extern_lib/httplib.h"
 #include "./dependences/sizeTextHandler.h"
 
@@ -141,7 +139,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     double fliterSize = StringToSize(fileSize);
     qDebug("sizeFliterr:%f",fliterSize);
 
-    float FProgress;
+    double FProgress;
     float RecordProgress = 0;
     double SpeedValue = 0;
 
@@ -156,17 +154,24 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
 
     double totalSize = 0;
     int VectorSize = 0;
+    int tempCount = 0;
 
     auto res = cli.Get(itemLink.toStdString(),
       [&](const char *data, size_t data_length) {
 
-        DownloadContent.append(std::move(data),data_length);
+        newFile.write(data,data_length); //4kb缓存写入
 
         QString itemSpeed;
 
         if(UpdateProgressFlag){
+            std::ifstream sizeDetected(std::filesystem::u8path(Fullpath),std::ios::binary|std::ios::ate);
+            std::streampos fileSize = sizeDetected.tellg();
 
-            FProgress = (DownloadContent.size()*100/fliterSize);
+            tempCount = static_cast<int>(sizeDetected.tellg());
+            sizeDetected.close();
+
+            FProgress = (tempCount/fliterSize)*100;
+
             //inital Speed
             if(!RecordProgress){
                 RecordProgress = FProgress;
@@ -188,20 +193,15 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
 
         UpdateProgressFlag = false;
 
-
-       return true;
+        return true;
     });
 
     finish_t = clock();
     double total_t = (double)(finish_t - start_t) / CLOCKS_PER_SEC;//将时间转换为秒
     qDebug("CPU 占用的总时间:%f\n", total_t);
 
-    FProgress = (DownloadContent.size()*100/fliterSize);
-    emit ProgressUpdate(itemName,FProgress,"—");
-
-    qDebug("Connect.cpp Line 186:FileSize:%zu",DownloadContent.size());
-
-    std::string_view DownloadContentView(DownloadContent);
+    emit ProgressUpdate(itemName,100,"—");
+    qDebug("Connect.cpp Line 186:FileSize:%d",tempCount);
 
     QTimer::singleShot(0,this,[=]{
         qDebug() << "UpdateProgressTimer stop ID:" << QThread::currentThreadId();
@@ -209,7 +209,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
         m_ui->textBrowser_log->append(R"(<span style=" color:#ffffff;">)"+itemName+R"( Download Succ.</span>)");
     });
 
-    WriteToFile(Fullpath,fileName,DownloadContentView);
+    newFile.close();
 
 }
 
@@ -222,7 +222,6 @@ void Connect::cliFileUpload(QString& QTargetPosition){
 
     httplib::MultipartFormData FormData;
     httplib::MultipartFormDataItems items; //->std::vector<httplib::MultipartFormData>
-
 
     for(auto& uploadFile:UploadVector){
 

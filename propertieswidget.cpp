@@ -34,6 +34,7 @@ double SpeedCount;
 extern Connect *Client1;
 extern std::string DownloadPath;
 extern QString ParentPath;
+extern bool ConnectedFlag;
 
 QList<QString> DownloadSpeedList;
 
@@ -358,7 +359,7 @@ void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
 
 void PropertiesWidget::ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSpeed){
 
-    //qDebug() << "from thread slot:" << QThread::currentThreadId();
+    qDebug() << "from thread slot:" << QThread::currentThreadId();
 
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
     Qt::MatchFlags flag = Qt::MatchExactly;
@@ -496,7 +497,7 @@ void PropertiesWidget::dragMoveEvent(QDragMoveEvent *dragMoveEvent){
 }
 
 void PropertiesWidget::dragEnterEvent(QDragEnterEvent *dragEnterEvent){
-    if(ParentPath.isEmpty()) return;
+    if(ConnectedFlag) return;
 
     if(dragEnterEvent->mimeData()->hasFormat("application/x-qwidget")){
         dragEnterEvent->acceptProposedAction();

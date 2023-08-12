@@ -46,6 +46,7 @@ std::string DownloadPath = "./downloads/";
 bool m_status = false;
 
 short SplitterRecord;
+extern bool ConnectedFlag;
 
 //全局对象 创立
 Connect *Client1;
@@ -555,7 +556,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem, int column){
 void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
 
 //这里的column代表这一行里点击的位置判定(Icon->0/FileName->1/Size->2...) 不过我并没有对column作出什么更改需求
-    if(ParentPath.isEmpty()) return;
+    if(!ConnectedFlag) return;
 
 //  QString selectedFileListsIcon = listItem->text(iconList);
     QString selectedFileListsName = listItem->text(nameList);
@@ -605,6 +606,10 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem,int column){
                         emit DockProgressCreate(Item);
                     }
 
+                }
+
+                else{
+                    emit DockProgressCreate(Item);
                 }
 
             }

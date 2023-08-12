@@ -22,6 +22,8 @@ extern std::vector<std::string> SizeVector;
 extern FileList *SurfingFile;
 extern Connect Client1; //共同使用Client1的数据
 
+bool ConnectedFlag = false;
+
 IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
     QWidget(parent),
     ui(new Ui::IP_controlPanel),
@@ -148,6 +150,7 @@ void IP_controlPanel::action_pressed(){
 
             if(Client1.cliPing()){
                 log_view->append(R"(<span style=" color:#ffffff;">Ping Succ</span>)");
+                ConnectedFlag = true;
 
                 if(!ui->lineEdit_username->text().isEmpty()){
                     qDebug("username:%s",ui->lineEdit_username->text().toStdString().c_str());
@@ -181,7 +184,8 @@ void IP_controlPanel::action_pressed(){
             qDebug()<<"connect Abort.";
             ui->pushButton_Connect->setEnabled(true);
 
-            ParentPath = nullptr; //擦除信息
+            ConnectedFlag = false;
+
             SurfingFile->clear();
             QList<QString> newItemInformation{"To start","please config","setting->IP control Panel",""};
             SurfingFile->addTopLevelItem(new QTreeWidgetItem(newItemInformation));

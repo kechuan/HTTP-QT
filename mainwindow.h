@@ -45,8 +45,8 @@ private:
 
 private slots:
     void Tab_pressed();
-    void itemAccess(QTreeWidgetItem *listItem, int column);
-    bool FileList_Menu(QTreeWidgetItem *listItem, int column);
+    void itemAccess(QTreeWidgetItem *listItem);
+    bool FileList_Menu(QTreeWidgetItem *listItem);
 
 
 /*Right Click menuList */
@@ -58,7 +58,7 @@ private slots:
 
     void Refresh();
 /*Function Area */
-    void LostSelection(int column);
+    void LostSelection();
     void showStatus(bool&);
     void clearStatusList();
 

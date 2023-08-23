@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     }
 
     MainWindow w;
-    QIcon Title = QIcon(":/icon/Icon.ico");
+    QIcon Title = QIcon(":/icoPack/title.ico");
     w.setWindowIcon(Title);
     w.show();
 

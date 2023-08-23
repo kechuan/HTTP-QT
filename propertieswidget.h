@@ -18,7 +18,7 @@ public:
     ~PropertiesWidget();
 
     void keyPressEvent(QKeyEvent *event);
-//    void resizeEvent(QResizeEvent *resizeEvent);
+    void resizeEvent(QResizeEvent *resizeEvent);
 
     void dragEnterEvent(QDragEnterEvent *dragEnterEvent);
     void dropEvent(QDropEvent* dropEvent);
@@ -32,34 +32,24 @@ private:
     Ui::MainWindow *m_ui;
 
 signals:
-    void Download(QTreeWidgetItem *DropItem,int colmun);
+    void Download(QTreeWidgetItem *DropItem);
 
 
 public slots:
    void clearStatusList();
 
-   //ActionTrigged
    void ActionPressed();
 
-   //StatusChanged
    void StatusChanged(int Status,QTreeWidgetItem* listItem);
 
-   //Downloading&Uploading
-
    void ProgressCreate(QTreeWidgetItem *Item);
-   // void ProgressUpdate(const QString& itemName,const QString& itemSize,const QString& itemLink,const float& Progress);
-   // void ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSize,const QString& itemSpeed,const QString& itemLink);
    void ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSpeed);
    
+   bool TaskList_Menu(QTreeWidgetItem *listItem);
 
-   bool TaskList_Menu(QTreeWidgetItem *listItem, int column);
-
-   void OpenFile(QTreeWidgetItem* listItem,int colmun);
-   void OpenFileFromFolder(QTreeWidgetItem* listItem,int colmun);
-
+   void OpenFile(QTreeWidgetItem* listItem);
+   void OpenFileFromFolder(QTreeWidgetItem* listItem);
 
 };
 
-
-
-#endif // PROPERTIESWIDGET_H
+#endif

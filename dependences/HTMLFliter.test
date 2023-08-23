@@ -10,61 +10,14 @@ inline std::regex HTMLLinkReg(R"(<\s*a\s+[^>]*href\s*=\s*"([^/view/]+[^"]*))", s
 inline std::regex HTMLDiskReg(R"((path=)+(.*))", std::regex::icase);                                                    //target group1
 inline std::regex HTMLNameReg(R"(<\s*div\s+[^>]*class\s*=\"(dirname|filename)\">+([^<]*))", std::regex::icase);       //target group2
 inline std::regex HTMLSizeReg(R"(<\s*div\s*+[^>]*class\s*=\"filesize\">+([^<]*))", std::regex::icase);                //target group1
-inline std::regex HTMLExtReg(R"(\.+(.*)$)");
 
 inline std::regex MenuContentMatch(R"(<ul>+(.*?)+</ul>)");                                                      //target group0
-inline std::regex list(R"(<div\s*id=\"list\">)");
+inline std::regex listSegment(R"(<div\s*id=\"list\">)");
 
-//inline std::regex fileslistSegments(R"(<ul\s*id='fileslist'>.*?</ul>)"); //catchGroup 1
-//inline std::regex HTMLTypeFliter(R"(<use\sxlink:href="#ext-(\w+)[^>])"); //catchGroup 1
+inline std::regex fileslistSegments(R"(<ul\s*id='fileslist'>.*?</ul>)"); //catchGroup 1
+inline std::regex HTMLTypeFliter(R"(<use\sxlink:href="#ext-(\w+)[^>])"); //catchGroup 1
 
 inline std::smatch matches;
-
-enum Type{
-    Dir,
-    Text,
-    Image,
-    Video,
-    Music,
-    Compress,
-    Code,
-    Unknown
-};
-
-inline int TypeJudge(std::string& FileNameSuffix){
-
-    std::regex text_fliter (R"(txt|md|ini|json|cfg$)",std::regex::icase);
-    std::regex image_fliter (R"(jpe?g|png|bmp|webp$)",std::regex::icase);
-    std::regex video_fliter (R"(mkv|mp4|flv|webv|m2ts|rmvb$)",std::regex::icase);
-    std::regex audio_fliter (R"(mp3|aac|flac|ogg|opus|aiff|alac|cue$)",std::regex::icase);
-    std::regex compress_fliter (R"(zip|rar|7z|iso|\d{3}$)",std::regex::icase);
-    std::regex code_fliter (R"(h|c?pp|py|ruby|js|ts$)",std::regex::icase);
-
-    std::array<std::regex,6> fliterArray = {
-        text_fliter,
-        image_fliter,
-        video_fliter,
-        audio_fliter,
-        compress_fliter,
-        code_fliter
-    };
-
-    //默认以文件开头
-    int fliterIndex = Text;
-
-    while(fliterIndex<fliterArray.size()){
-        while (std::regex_search(FileNameSuffix, matches, fliterArray.at(fliterIndex-1))) {
-            if(matches[0]!="") {
-                return fliterIndex;
-            }
-        }
-
-        ++fliterIndex;
-    }
-
-    return Unknown;
-
-}
 
 
 inline void copy_template(std::string& string, std::regex &regexp, size_t &&matchGroup , std::vector<std::string> &stringVector){
@@ -76,10 +29,8 @@ inline void copy_template(std::string& string, std::regex &regexp, size_t &&matc
     );
 }
 
-
+//剪切导航栏上的超链接信息 以便获取上一级文件夹的跳转位置
 inline std::string HTMLFliter(std::string &Information,std::vector<std::string> &PathVector){
-    std::smatch matches;
-
     std::string tempString = std::move(Information);
     std::string MenuContent;
 
@@ -90,11 +41,14 @@ inline std::string HTMLFliter(std::string &Information,std::vector<std::string> 
 
     copy_template(MenuContent,HTMLLinkReg,1,PathVector);
 
-    // qDebug("Path.size():%zu\n",PathVector.size());
-    // for(auto &Path:PathVector) qDebug("Path:%s\n",Path.c_str());
+    //当代迷思 为什么要加这一段才可以 有效
+    //for(auto &Path:PathVector) qDebug("Path:%s\n",Path.c_str());
 
-    while (std::regex_search(tempString, matches, list)) {    //仅修剪
-        tempString = matches.suffix(); //命中之后就把命中内容从string修剪掉 这里指代<div id="list">开始之外的所有内容
+    while (std::regex_search(tempString, matches, listSegment)) {    //仅修剪
+        tempString = matches.suffix(); 
+        /*   命中之后就把命中内容从string修剪掉 
+         *   这里指代<div id="list">开始之外的所有内容 以给下文作其他的Fliter
+         */
     }
 
     return tempString;
@@ -119,37 +73,47 @@ inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkV
 
 }
 
-inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, std::vector<std::string> &PathVector, std::vector<std::string> &NameVector, std::vector<std::string> &SizeVector,std::vector<int> &TypeVector){
+//获取dirlist内部信息&fileslist内部信息
+inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, std::vector<std::string> &PathVector, std::vector<std::string> &NameVector, std::vector<std::string> &SizeVector, std::vector<std::string> &TypeVector){
+
+    //reset all content
     LinkVector.clear(); LinkVector.shrink_to_fit();
     PathVector.clear(); PathVector.shrink_to_fit();
     NameVector.clear(); NameVector.shrink_to_fit();
     SizeVector.clear(); SizeVector.shrink_to_fit();
     TypeVector.clear(); TypeVector.shrink_to_fit();
 
+    //Fliter real Information.
 
     std::string FilteredInformation = std::move(HTMLFliter(Information,PathVector));
     copy_template(FilteredInformation,HTMLLinkReg,1,LinkVector);
     copy_template(FilteredInformation,HTMLSizeReg,1,SizeVector);
     copy_template(FilteredInformation,HTMLNameReg,2,NameVector);
 
-    std::vector<std::string> EXTVector;
+    std::string filelistString;
 
-    for(int SizeIndex = 0;SizeIndex<SizeVector.size();++SizeIndex){
-        if(SizeVector.at(SizeIndex)!="—"){
-            copy_template(NameVector.at(SizeIndex),HTMLExtReg,1,EXTVector); //获取非"—"的 文件名格式
-        }
+    while (std::regex_search(FilteredInformation, matches, fileslistSegments)){
+        FilteredInformation = matches.suffix();
+        filelistString+=matches[0];
     }
 
-    int Residual = SizeVector.size() - EXTVector.size();
+    //填充dir到TypeVector内以保持其他Vector长度同步
+    
+    std::vector<std::string> tempVector;
+    copy_template(filelistString,HTMLTypeFliter,1,tempVector);
 
-    for(int fillIndex = 0; fillIndex<Residual; ++fillIndex){
-        TypeVector.emplace_back(Dir);
+    for(int fillIndex = 0;fillIndex<SizeVector.size() - tempVector.size();++fillIndex){
+        TypeVector.emplace_back("dir");
     }
 
-    for(auto &Type:EXTVector){
-//        qDebug("Type:%s",Type.c_str());
-        TypeVector.emplace_back(TypeJudge(Type));
-    }
+    //最后通过insert拼贴 不要忘了it本质是指针! 或者用copy也是一样的 (begin,end,back_inserter(TypeVector))
+    TypeVector.insert(TypeVector.end(),tempVector.begin(),tempVector.end());
+
+
+    //for(auto &Path:PathVector) qDebug("Path:%s",Path.c_str());
+    //for(auto &Link:LinkVector) qDebug("Link:%s",Link.c_str());
+    for(auto &Type:TypeVector) qDebug("Type:%s",Type.c_str());
+    //不要直接使用 for(iter:<容器>) 因为会导致一次拷贝构造
 
 }
 

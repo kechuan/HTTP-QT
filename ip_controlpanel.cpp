@@ -12,7 +12,6 @@ extern QString FullIP;
 extern int Port;
 
 extern QString SurfingPath;
-extern QString ParentPath;
 
 extern std::vector<std::string> LinkVector;
 extern std::vector<std::string> PathVector;
@@ -50,8 +49,8 @@ IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
         }
     )");
 
-    //根据qrc文件下的描述确立路径 :/svg/ArrowPack/...
-    QIcon rightArrow = QIcon(":/svg/ArrowPack/icon-rightArrow.svg");
+    //根据qrc文件下的描述确立路径 :/svgPack/ArrowPack/...
+    QIcon rightArrow = QIcon(":/svgPack/ArrowPack/icon-rightArrow.svg");
     pushButton_collapse->setIcon(rightArrow);
 
 
@@ -64,7 +63,7 @@ IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
             ui->lineEdit_username->setVisible(true);
             ui->lineEdit_password->setVisible(true);
 
-            QIcon downArrow = QIcon(":/svg/ArrowPack/icon-downArrow.svg");
+            QIcon downArrow = QIcon(":/svgPack/ArrowPack/icon-downArrow.svg");
             pushButton_collapse->setIcon(downArrow);
 
         }
@@ -76,7 +75,7 @@ IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
             ui->lineEdit_username->setVisible(false);
             ui->lineEdit_password->setVisible(false);
 
-            QIcon rightArrow = QIcon(":/svg/ArrowPack/icon-rightArrow.svg");
+            QIcon rightArrow = QIcon(":/svgPack/ArrowPack/icon-rightArrow.svg");
             pushButton_collapse->setIcon(rightArrow);
         }
     });

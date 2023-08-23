@@ -31,11 +31,12 @@ set(PROJECT_SOURCES
         propertieswidget.h propertieswidget.cpp propertieswidget.ui
         DelegateProgressBar.h
         FileList.h FileList.cpp
+        toaster.h toaster.cpp toaster.ui
 
         ${TS_FILES}
 )
 
-set(QRC_SOURCE_FILES ./resource/svg/ArrowPack.qrc)
+set(QRC_SOURCE_FILES ./resource/icon/IconPack.qrc)
 qt6_add_resources(QRC_FILES ${QRC_SOURCE_FILES})
 
 

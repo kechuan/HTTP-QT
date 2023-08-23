@@ -38,11 +38,11 @@ private:
     Ui::MainWindow *m_ui;
 
 signals:
-//    void ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSize,const QString& itemSpeed,const QString& itemLink);
     void ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSpeed);
-
     void DownloadSpeedUpdate(float& bodySize);
-    void Downloading(std::map<std::string,int> &TaskMap,std::string& Name,int &Progress);
+    void ToasterShow(const QString& itemName);
+
+public slots:
 
 
 };

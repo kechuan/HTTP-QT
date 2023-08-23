@@ -3,6 +3,7 @@
 #include "DelegateProgressBar.h"
 
 #include "connect.h"
+#include "toaster.h"
 #include "./dependences/sizeTextHandler.h"
 
 #include <QtWidgets>
@@ -32,7 +33,7 @@ int PropTaskCount;
 double SpeedCount;
 
 extern Connect *Client1;
-extern std::string DownloadPath;
+extern std::string storagePath;
 extern QString ParentPath;
 extern bool ConnectedFlag;
 
@@ -53,13 +54,23 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     this->setAcceptDrops(true); //prop控件允许被拖拽事件响应
 
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
-    treeWidgetTaskQueue->setStyleSheet("QHeaderView::section{background:#B1EA14;}");
+
+
+    treeWidgetTaskQueue->setStyleSheet(R"(
+        QHeaderView::section{background:#B1EA14;}
+    )");
+
+    treeWidgetTaskQueue->setColumnWidth(StatusList,40); //单独设置长度
+    treeWidgetTaskQueue->setColumnWidth(ProgressList,100); //单独设置长度
+
+    Toaster *DragToaster = new Toaster(this,ui);
+    DragToaster->move(treeWidgetTaskQueue->width()*0.55,treeWidgetTaskQueue->height());
 
     treeWidgetTaskQueue->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     //疑似自适应长度
     treeWidgetTaskQueue->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    treeWidgetTaskQueue->header()->setMinimumSectionSize(80);
+    treeWidgetTaskQueue->header()->setMinimumSectionSize(60);
 
     QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemPressed,this,&PropertiesWidget::TaskList_Menu); //item按下判断触发
     QObject::connect(treeWidgetTaskQueue,&QTreeWidget::itemDoubleClicked,this,&PropertiesWidget::OpenFile);
@@ -85,9 +96,9 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QPushButton *Paused_Button = ui->pushButton_Pause;
     QPushButton *Remove_Button = ui->pushButton_Remove;
 
-    QIcon ContinueIcon = QIcon(":/svg/ArrowPack/icon-Continue.svg");
-    QIcon PauseIcon = QIcon(":/svg/ArrowPack/icon-Pause.svg");
-    QIcon RemoveIcon = QIcon(":/svg/ArrowPack/icon-Remove.svg");
+    QIcon ContinueIcon = QIcon(":/svgPack/StatusPack/icon-Continue.svg");
+    QIcon PauseIcon = QIcon(":/svgPack/StatusPack/icon-Pause.svg");
+    QIcon RemoveIcon = QIcon(":/svgPack/StatusPack/icon-Remove.svg");
 
     Continued_Button->setIconSize(QSize(24,24));
     Paused_Button->setIconSize(QSize(24,24));
@@ -114,6 +125,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
 
         if(!PropTaskCount){
             qDebug("new Task Listen Start.");
+            qDebug()<<"DownloadSpeedWatcher:"<<QThread::currentThreadId();
             PropTaskCount = treeWidgetTaskQueue->topLevelItemCount();
             DownloadWatcher->start(500); //开启监听 0.5s刷新
 
@@ -151,6 +163,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
                         qDebug("currentTask Name:%s,itemSpeed:%s",currentTask->text(FilenameList).toStdString().c_str(),currentTask->text(SpeedList).toStdString().c_str());
                         SpeedCount+=StringToSize(SpeedText);
                         DownloadingStatus = true; //只要有任一一项还在活跃的任务 监控继续
+
                     }
                 }
             }
@@ -178,7 +191,7 @@ PropertiesWidget::~PropertiesWidget(){
 
 
 //slots:
-bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
+bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem){
 
     selectedTaskList = ui->treeWidgetTaskQueue->selectedItems();
     if(listItem==nullptr) return false;
@@ -243,11 +256,11 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem, int column){
             &QAction::triggered,
             this,
             [listItem,this](){
-                return OpenFile(listItem,0);
+                return OpenFile(listItem);
             }
         );
 
-        QObject::connect(Open_From_Folder,&QAction::triggered,this,[listItem,this](){return OpenFileFromFolder(listItem,0);});
+        QObject::connect(Open_From_Folder,&QAction::triggered,this,[listItem,this](){return OpenFileFromFolder(listItem);});
 
         QObject::connect(Remove,&QAction::triggered,this,[this](){
             deletePrompt(selectedTaskList);
@@ -346,14 +359,16 @@ void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
         return;
     }
 
-                                    // Status,  Filename,      Progress,    Size,      Speed,DateTime,     storagePath
-    QList<QString> newItemInformation{"Pending",Item->text(FilenameList),"Progress",Item->text(2),"—","DateTime",QString::fromStdString(DownloadPath)};
-
+                                    // Status,  Filename,      Progress,    Size,      Speed,           DateTime,  storagePath
+    QList<QString> newItemInformation{"",Item->text(FilenameList),"Progress",Item->text(2),"—","DateTime",QString::fromStdString(storagePath)};
 
     ProgressBarDelegate* progressBar = new ProgressBarDelegate(treeWidgetTaskQueue);
 
     treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
     treeWidgetTaskQueue->setItemDelegateForColumn(ProgressList, progressBar);
+
+    treeWidgetTaskQueue->topLevelItem(treeWidgetTaskQueue->topLevelItemCount()-1)->setData(StatusList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Pending.svg"));
+    treeWidgetTaskQueue->topLevelItem(treeWidgetTaskQueue->topLevelItemCount()-1)->setTextAlignment(0,Qt::AlignRight);
 
 }
 
@@ -370,6 +385,7 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const float& Progr
 
         QMetaObject::invokeMethod(this,[&](){
             currentItem->setData(ProgressList, Qt::UserRole, Progress); //数据更新
+
             currentItem->setText(SpeedList,itemSpeed);
             StatusChanged(Downloading,currentItem);
 
@@ -389,7 +405,9 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 
     switch(Status){
         case Downloading: {
-            listItem->setText(StatusList,"Downloading"); break; 
+            listItem->setData(StatusList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Downloading.svg")); //数据更新
+            qDebug("listItem text:%s",listItem->text(0).toStdString().c_str());
+            break;
         }
 
         case Uploading: {
@@ -410,7 +428,7 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 
         case Finished:{
             qDebug("listItem:%s Status change. Status Code: %d",listItem->text(FilenameList).toStdString().c_str(),Status);
-            listItem->setText(StatusList,"Finished");
+            listItem->setData(StatusList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Completed.svg")); //数据更新
             listItem->setText(DateTimeList,QTime::currentTime().toString());
 
             break;
@@ -422,12 +440,11 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 
 //Slot:
 
-void PropertiesWidget::OpenFile(QTreeWidgetItem* listItem,int colmun){
+void PropertiesWidget::OpenFile(QTreeWidgetItem* listItem){
     QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(StoragePathList)+listItem->text(FilenameList))));
 }
 
-
-void PropertiesWidget::OpenFileFromFolder(QTreeWidgetItem* listItem,int colmun){
+void PropertiesWidget::OpenFileFromFolder(QTreeWidgetItem* listItem){
     qDebug("storagePath:%s",listItem->text(StoragePathList).toStdString().c_str());
     QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(StoragePathList))));
 }
@@ -435,7 +452,6 @@ void PropertiesWidget::OpenFileFromFolder(QTreeWidgetItem* listItem,int colmun){
 void PropertiesWidget::ActionPressed(){
 
     //QPushButton *button = (QPushButton *)sender(); //指针函数sender?
-
     //等同于以下声明
     QPushButton *button = static_cast<QPushButton*>(sender());
 
@@ -497,7 +513,7 @@ void PropertiesWidget::dragMoveEvent(QDragMoveEvent *dragMoveEvent){
 }
 
 void PropertiesWidget::dragEnterEvent(QDragEnterEvent *dragEnterEvent){
-    if(ConnectedFlag) return;
+    if(!ConnectedFlag) return;
 
     if(dragEnterEvent->mimeData()->hasFormat("application/x-qwidget")){
         dragEnterEvent->acceptProposedAction();
@@ -516,13 +532,25 @@ void PropertiesWidget::dropEvent(QDropEvent *dropEvent){
         qDebug("selectedTaskList.length:%zu",selectedFileList.length());
         if(!selectedFileList.length()) return;
 
-        emit Download(selectedFileList.at(0),0);
+
+
+        // 文件/文件夹 判断处理
+
+        //mimedata本质无法解析里面的数据类型的 Content-Type 但是 文字处理可以 这里选择Qurl与Qinfo
+
+        /*因为这里的下载处理本质是直接读取selectedFileList的
+         * 因此才会直接将selectedFileList.at(0)传达出去。
+         * 本质上selectedFileList是extern传过来的 要是再传回去就感觉。。不符合逻辑
+         *
+         */
+
+        emit Download(selectedFileList.at(0));
 
     }
 
 }
 
-//void PropertiesWidget::resizeEvent(QResizeEvent *resizeEvent){
-//    qDebug("frame_TaskQueue Height:%d",this->ui->frame_TaskQueue->geometry().size().height());
-//    qDebug("frame_TaskQueue Width:%d",this->ui->frame_TaskQueue->geometry().size().width());
-//}
+void PropertiesWidget::resizeEvent(QResizeEvent *resizeEvent){
+    qDebug("frame_TaskQueue Height:%d",this->ui->frame_TaskQueue->height());
+    qDebug("frame_TaskQueue Width:%d",this->ui->frame_TaskQueue->width());
+}

@@ -16,7 +16,7 @@ using namespace httplib;
 //C++ 11 using alias for class/template
 using string = std::string;
 
-extern std::string DownloadPath;
+extern std::string storagePath;
 extern std::vector<std::string> UploadVector;
 
 extern QString FullIP;
@@ -24,6 +24,7 @@ extern int Port;
 
 QTimer *UpdateProgressTimer;
 bool UpdateProgressFlag = false;
+
 
 clock_t start_t;
 clock_t finish_t;
@@ -36,8 +37,6 @@ Connect::Connect(Ui::MainWindow *m_ui):m_ui(m_ui){
         UpdateProgressFlag = true;
     });
 }
-
-void WriteToFile(std::string DownloadPath,std::string& FileName,std::string_view& Data); //预声明
 
 void Connect::Abort(){
     qDebug()<<"connect Abort.";
@@ -97,22 +96,6 @@ std::string Connect::cliFileSurfing(QString& Postition){
     return body;
 }
 
-
-
-void WriteToFile(std::string path,std::string& FileName,std::string_view& Data){ //overload
-    qDebug("Connect.cpp Line 91: path:%s",path.c_str());
-
-    //方案一 将string转成wchar_t
-    //方案二(C++ 17 add,C++ 20 deprecated) 使用std::filesystem::u8path(path) 来使用utf-8编码对path进行操作
-
-    std::ofstream writeFile(std::filesystem::u8path(path), std::ios::binary);
-
-    writeFile<<Data;
-    writeFile.close();
-
-}
-
-
 void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemLink){
 
     qDebug() << "Connect.cpp Line 108: thread cliFileDownload" << QThread::currentThreadId();
@@ -120,13 +103,13 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     Client cli(FullIP.toStdString(),Port);
 
     std::string fileName = itemName.toStdString();
-    std::string Fullpath = DownloadPath;
+    std::string Fullpath = storagePath;
     std::string fileSize = itemSize.toStdString();
 
     qDebug("download trigger Link:%s",itemLink.toStdString().c_str());
 
 
-//File Precreate Prevent DownloadPath Change Error.
+//File Precreate Prevent storagePath Change Error.
     Fullpath.append(fileName.c_str());
     qDebug("Precreate empty File:%s",Fullpath.c_str());
 
@@ -139,6 +122,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     double fliterSize = StringToSize(fileSize);
     qDebug("sizeFliterr:%f",fliterSize);
 
+    bool Paused = false;
     double FProgress;
     float RecordProgress = 0;
     double SpeedValue = 0;
@@ -152,25 +136,28 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
         UpdateProgressTimer->start(500);
     });
 
-    double totalSize = 0;
-    int VectorSize = 0;
-    int tempCount = 0;
+    int tempFileSize = 0;
 
     auto res = cli.Get(itemLink.toStdString(),
       [&](const char *data, size_t data_length) {
 
         newFile.write(data,data_length); //4kb缓存写入
 
+        //speedLimit思路
+        //std::this_thread::sleep_for(std::chrono::milliseconds(5)); //10ms -> 128KB/s
+
+        //pause思路
+        //但有两个问题 谁来传递这个函数到这里 以及 暂停了之后要怎么恢复?
+        //std::this_thread::sleep_for(std::chrono::seconds(32767));
+
         QString itemSpeed;
 
         if(UpdateProgressFlag){
             std::ifstream sizeDetected(std::filesystem::u8path(Fullpath),std::ios::binary|std::ios::ate);
-            std::streampos fileSize = sizeDetected.tellg();
-
-            tempCount = static_cast<int>(sizeDetected.tellg());
+            tempFileSize = static_cast<int>(sizeDetected.tellg());
             sizeDetected.close();
 
-            FProgress = (tempCount/fliterSize)*100;
+            FProgress = (tempFileSize/fliterSize)*100;
 
             //inital Speed
             if(!RecordProgress){
@@ -201,7 +188,15 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     qDebug("CPU 占用的总时间:%f\n", total_t);
 
     emit ProgressUpdate(itemName,100,"—");
-    qDebug("Connect.cpp Line 186:FileSize:%d",tempCount);
+    emit ToasterShow(itemName);
+
+    if(!tempFileSize){
+        std::ifstream sizeDetected(std::filesystem::u8path(Fullpath),std::ios::binary|std::ios::ate);
+        tempFileSize = static_cast<int>(sizeDetected.tellg());
+        sizeDetected.close();
+    }
+
+    qDebug("Connect.cpp Line 186:FileSize:%d",tempFileSize);
 
     QTimer::singleShot(0,this,[=]{
         qDebug() << "UpdateProgressTimer stop ID:" << QThread::currentThreadId();

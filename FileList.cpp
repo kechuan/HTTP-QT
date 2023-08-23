@@ -18,14 +18,14 @@ FileList::FileList(QWidget *ParentWidget):QTreeWidget(ParentWidget){
     this->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     this->header()->setSectionResizeMode(0,QHeaderView::Fixed);
-    this->setColumnWidth(0,80);
+    this->setColumnWidth(0,40);
 
     QList<QString> InitalHeader{"Icon","Filename","Size"};
     this->setHeaderItem(new QTreeWidgetItem(InitalHeader));
 
 
     this->addTopLevelItem(new QTreeWidgetItem({"To start","please config","setting->IP control Panel"}));
-    this->addTopLevelItem(new QTreeWidgetItem({"Change Path","please config","setting->DownloadPath Setting"}));
+    this->addTopLevelItem(new QTreeWidgetItem({"Change Path","please config","setting->storagePath Setting"}));
     this->addTopLevelItem(new QTreeWidgetItem({"Change Threads","please Drag","MaxThread"}));
 
     this->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
@@ -45,13 +45,15 @@ void FileList::mouseMoveEvent(QMouseEvent *mouseMoveEvent){
 
     selectedFileList = this->selectedItems();
 
+    emit DragingFile();
+
     QDrag *drag = new QDrag(this);
     QMimeData *mimeData = new QMimeData;
 
     mimeData->setData("application/x-qwidget",QByteArray::number((quintptr)this)); //将this指针转化为quintptr 挂上x-qwidget标签
 
     drag->setMimeData(mimeData);
-    drag->setPixmap(QPixmap(":/icon/Icon.ico"));
+    drag->setPixmap(QPixmap(":/icoPack/title.ico"));
 
     //热点基本上定义了拖动操作正在进行时拖动的像素图应位于的位置(固定)
     //    drag->setHotSpot(mouseMoveEvent->pos());

@@ -34,14 +34,14 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout">
           <item>
-           <widget class="QLineEdit" name="DownloadPath">
+           <widget class="QLineEdit" name="storagePath">
             <property name="enabled">
              <bool>true</bool>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="DownloadSurfingPath">
+           <widget class="QPushButton" name="storageSurfingPath">
             <property name="enabled">
              <bool>true</bool>
             </property>
@@ -148,7 +148,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      </widget>
     </item>
     <item>
-     <widget class="QWidget" name="widget" native="true">
+     <widget class="QWidget" name="toolWidget" native="true">
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <item>
         <widget class="QPushButton" name="pushButton_TaskQueue">
@@ -350,7 +350,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <string>Setting</string>
     </property>
     <addaction name="IP_controlPanel"/>
-    <addaction name="DownloadPathSetting"/>
+    <addaction name="storagePathSetting"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -371,7 +371,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <string>IP控制台</string>
    </property>
   </action>
-  <action name="DownloadPathSetting">
+  <action name="storagePathSetting">
    <property name="text">
     <string>下载目录设置</string>
    </property>

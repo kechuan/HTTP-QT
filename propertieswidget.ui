@@ -173,7 +173,7 @@
           </attribute>
           <column>
            <property name="text">
-            <string>Status(hidden)</string>
+            <string>Status</string>
            </property>
           </column>
           <column>

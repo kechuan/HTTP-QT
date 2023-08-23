@@ -1,0 +1,26 @@
+<RCC>
+    <qresource prefix="/svgPack">
+        <file>StatusPack/icon-Completed.svg</file>
+        <file>StatusPack/icon-Continue.svg</file>
+        <file>StatusPack/icon-Downloading.svg</file>
+        <file>StatusPack/icon-Pause.svg</file>
+        <file>StatusPack/icon-Pending.svg</file>
+        <file>StatusPack/icon-Remove.svg</file>
+        <file>ArrowPack/icon-downArrow.svg</file>
+        <file>ArrowPack/icon-rightArrow.svg</file>
+        <file>TypePack/icon-Text.svg</file>
+        <file>TypePack/icon-Code.svg</file>
+        <file>TypePack/icon-Dir.svg</file>
+        <file>TypePack/icon-Compress.svg</file>
+        <file>TypePack/icon-doc.svg</file>
+        <file>TypePack/icon-Music.svg</file>
+        <file>TypePack/icon-ppt.svg</file>
+        <file>TypePack/icon-Unknown.svg</file>
+        <file>TypePack/icon-xls.svg</file>
+        <file>TypePack/icon-Video.svg</file>
+        <file>TypePack/icon-Image.svg</file>
+    </qresource>
+    <qresource prefix="/icoPack">
+        <file>title.ico</file>
+    </qresource>
+</RCC>

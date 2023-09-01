@@ -1,16 +1,22 @@
+//ui Design
 #include "mainwindow.h"
+#include "propertieswidget.h"
 #include "./ui_mainwindow.h"
 #include "ui_propertieswidget.h"
 
-#include "connect.h"
-
+//dependences Lib
 #include "./dependences/HTMLFliter.h"
+
+//util Libs
+#include "connect.h"
 #include "FileList.h"
 #include "toaster.h"
 
+//common Libs
 #include <string>
 #include <vector>
 
+//QT Libs
 #include <QDebug>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -34,7 +40,7 @@ std::vector<std::string> LinkVector = {};
 std::vector<std::string> PathVector = {};
 std::vector<std::string> NameVector = {};
 std::vector<std::string> SizeVector = {};
-std::vector<int> TypeVector = {};
+std::vector<char> TypeVector = {};
 
 std::vector<std::string> UploadVector = {};
 
@@ -54,6 +60,7 @@ extern bool ConnectedFlag;
 //全局对象 创立
 Connect *Client1;
 FileList *SurfingFile;
+PropertiesWidget *DockWidget;
 
 QList<QTreeWidgetItem*> selectedFileList;
 
@@ -362,6 +369,9 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+    delete Client1;
+    delete SurfingFile;
+    delete DockWidget;
 }
 
 
@@ -438,7 +448,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
         Delete,
         &QAction::triggered,
         this,
-        [this,listItem](){
+        [this](){
             MainWindow::Delete();
         }
     );
@@ -453,7 +463,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
         }
     );
 
-    QObject::connect(NewDir,SIGNAL(triggered(bool)),this,SLOT(NewDir()));
+    QObject::connect(NewDir,&QAction::triggered,this,&MainWindow::NewDir);
 
 
     QObject::connect(
@@ -593,10 +603,11 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
                     continue;
                 }
 
-
                 //重复下载确认区域
                 QTreeWidget *treeWidgetTaskQueue = DockWidget->ui->treeWidgetTaskQueue;
-                QList matchList = treeWidgetTaskQueue->findItems(Item->text(nameList),Qt::MatchExactly,1);
+                QList matchList = treeWidgetTaskQueue->findItems(Item->text(nameList),Qt::MatchExactly,0);
+
+                qDebug("Item->text(nameList):%s,treeWidgetTaskQueue text:%s",treeWidgetTaskQueue->topLevelItem(0)->text(0).toStdString().c_str(),Item->text(nameList).toStdString().c_str());
 
                 if (!matchList.empty()){
                     QMessageBox ReDownloadPrompt;
@@ -637,8 +648,8 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
 
                     QFutureWatcher<void> insideWatcher;
 
-                    for(int i = 0;i<DownloadPool.maxThreadCount();i++){
-                        insideTaskList.append(selectedFileList.at(i+batch*DownloadPool.maxThreadCount()));
+                    for(int insideTaskIndex = 0;insideTaskIndex<DownloadPool.maxThreadCount();insideTaskIndex++){
+                        insideTaskList.append(selectedFileList.at(insideTaskIndex+batch*DownloadPool.maxThreadCount()));
                     }
 
                     insideWatcher.setFuture(QtConcurrent::map(insideTaskList,[&](QTreeWidgetItem *selectedItem){
@@ -712,7 +723,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
         else{
 
             QTreeWidget *treeWidgetTaskQueue = DockWidget->ui->treeWidgetTaskQueue;
-            QList matchList = treeWidgetTaskQueue->findItems(listItem->text(nameList),Qt::MatchExactly,1);
+            QList matchList = treeWidgetTaskQueue->findItems(listItem->text(nameList),Qt::MatchExactly,0);
 
             if (!matchList.empty()){
                 QMessageBox ReDownloadPrompt;
@@ -729,6 +740,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
 
             }
 
+            //Accept行为
 
             emit DockProgressCreate(listItem);
 
@@ -800,7 +812,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
                     SurfingFile->addTopLevelItem(newItem);
 
                     auto RenderIcon = [=](const char *svgAdress){
-                        SurfingFile->topLevelItem(SurfingFile->topLevelItemCount()-1)->setData(iconList, Qt::DecorationRole,QIcon(svgAdress));
+                        SurfingFile->topLevelItem(SurfingFile->topLevelItemCount()-1)->setData(iconList, Qt::DecorationRole,QIcon(svgAdress).pixmap(QSize(26,26)));
                     };
 
                     switch(TypeVector.at(index)){
@@ -1041,7 +1053,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event){
         case Qt::Key_Return:
         case Qt::Key_Enter:
         {
-            emit SurfingFile->itemDoubleClicked(selectedTreeWidgetItems.at(0), 0); //因为判断方式已经变更成selectedTreeWidgetItems了 因此简化掉for循环
+            emit SurfingFile->itemDoubleClicked(selectedTreeWidgetItems.at(0), iconList); //因为判断方式已经变更成selectedTreeWidgetItems了 因此简化掉for循环
             break;
         }
 
@@ -1053,7 +1065,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event){
         case Qt::Key_Backspace:{
             if(LinkVector.size()!=0){
                 QTreeWidgetItem *UpperFolder = SurfingFile->topLevelItem(0);
-                emit SurfingFile->itemDoubleClicked(UpperFolder, 0); //退格->表示双击上层
+                emit SurfingFile->itemDoubleClicked(UpperFolder, iconList); //退格->表示双击上层
                 break;
             }
             

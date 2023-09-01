@@ -1,7 +1,9 @@
 #include "connect.h"
 #include "qthread.h"
+#include "propertieswidget.h"
 
 #include <QDebug>
+#include <QFileInfo>
 #include <fstream>
 #include <filesystem> //C++ 17 to solve fstream wchar problem.
 
@@ -18,6 +20,8 @@ using string = std::string;
 
 extern std::string storagePath;
 extern std::vector<std::string> UploadVector;
+
+extern PropertiesWidget *DockWidget;
 
 extern QString FullIP;
 extern int Port;
@@ -36,6 +40,7 @@ Connect::Connect(Ui::MainWindow *m_ui):m_ui(m_ui){
     QObject::connect(UpdateProgressTimer,&QTimer::timeout,this,[]{
         UpdateProgressFlag = true;
     });
+
 }
 
 void Connect::Abort(){
@@ -96,9 +101,10 @@ std::string Connect::cliFileSurfing(QString& Postition){
     return body;
 }
 
+
 void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemLink){
 
-    qDebug() << "Connect.cpp Line 108: thread cliFileDownload" << QThread::currentThreadId();
+    qDebug() << "Connect.cpp Line 101: thread cliFileDownload" << QThread::currentThreadId();
 
     Client cli(FullIP.toStdString(),Port);
 
@@ -122,7 +128,6 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     double fliterSize = StringToSize(fileSize);
     qDebug("sizeFliterr:%f",fliterSize);
 
-    bool Paused = false;
     double FProgress;
     float RecordProgress = 0;
     double SpeedValue = 0;
@@ -136,28 +141,75 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
         UpdateProgressTimer->start(500);
     });
 
-    int tempFileSize = 0;
+    int CompletedSize = 0;
+
+    //状态与锁
+    bool isPaused = false;
+    bool isCanceled = false;
+
+    std::mutex Download_mtx;
+    std::condition_variable Download_cv;
+
+    QObject::connect(DockWidget,&PropertiesWidget::TaskPaused,this,[&](QTreeWidgetItem *TaskItem){
+        if(TaskItem->text(0) == itemName){
+            std::unique_lock<std::mutex> Downloadlock(Download_mtx);
+            isPaused = true;
+            Download_cv.notify_one();
+        }
+    });
+
+    QObject::connect(DockWidget,&PropertiesWidget::TaskContinue,this,[&](QTreeWidgetItem *TaskItem){
+        if(TaskItem->text(0) == itemName){
+            std::unique_lock<std::mutex> Downloadlock(Download_mtx);
+            isPaused = false;
+            Download_cv.notify_one();
+        }
+    });
+
+    QObject::connect(DockWidget,&PropertiesWidget::TaskCancel,this,[&](QTreeWidgetItem *TaskItem){
+        if(TaskItem->text(0) == itemName){
+            std::unique_lock<std::mutex> Downloadlock(Download_mtx);
+            isPaused = true;
+            isCanceled = true;
+            Download_cv.notify_one();
+        }
+    });
 
     auto res = cli.Get(itemLink.toStdString(),
       [&](const char *data, size_t data_length) {
-
-        newFile.write(data,data_length); //4kb缓存写入
-
         //speedLimit思路
         //std::this_thread::sleep_for(std::chrono::milliseconds(5)); //10ms -> 128KB/s
 
-        //pause思路
-        //但有两个问题 谁来传递这个函数到这里 以及 暂停了之后要怎么恢复?
-        //std::this_thread::sleep_for(std::chrono::seconds(32767));
+        //MultiThread new content
 
-        QString itemSpeed;
+        std::unique_lock<std::mutex> DownloadLock(Download_mtx);
+        Download_cv.wait(DownloadLock,[&]{
+            if(isPaused){
+                qDebug() << "Download: Paused, thread ID:" << QThread::currentThreadId();
+                if(isCanceled){
+                    return isPaused;
+                }
+            }
+            return !isPaused;
+        });
+
+        //正常阶段到这里的isPaused一直是false 除非是由wait抛出来的true isPaused
+        if(isPaused){
+            qDebug() << "Download: Canceled.";
+            newFile.close();
+            emit CancelNotice();
+            return false;
+        }
+
+
+        newFile.write(data,data_length); //4kb缓存写入
 
         if(UpdateProgressFlag){
             std::ifstream sizeDetected(std::filesystem::u8path(Fullpath),std::ios::binary|std::ios::ate);
-            tempFileSize = static_cast<int>(sizeDetected.tellg());
+            CompletedSize = static_cast<int>(sizeDetected.tellg());
             sizeDetected.close();
 
-            FProgress = (tempFileSize/fliterSize)*100;
+            FProgress = (CompletedSize/fliterSize)*100;
 
             //inital Speed
             if(!RecordProgress){
@@ -172,7 +224,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
                 SpeedValue = ProgressResidual*fliterSize;
             }
 
-            itemSpeed = QString::fromStdString(SizeToString(SpeedValue));
+            QString itemSpeed = QString::fromStdString(SizeToString(SpeedValue));
 
             emit ProgressUpdate(itemName,FProgress,itemSpeed);
 
@@ -183,6 +235,10 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
         return true;
     });
 
+    //任务取消 直接抛出
+    if(isCanceled) return;
+
+
     finish_t = clock();
     double total_t = (double)(finish_t - start_t) / CLOCKS_PER_SEC;//将时间转换为秒
     qDebug("CPU 占用的总时间:%f\n", total_t);
@@ -190,13 +246,13 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     emit ProgressUpdate(itemName,100,"—");
     emit ToasterShow(itemName);
 
-    if(!tempFileSize){
+    if(!CompletedSize){
         std::ifstream sizeDetected(std::filesystem::u8path(Fullpath),std::ios::binary|std::ios::ate);
-        tempFileSize = static_cast<int>(sizeDetected.tellg());
+        CompletedSize = static_cast<int>(sizeDetected.tellg());
         sizeDetected.close();
     }
 
-    qDebug("Connect.cpp Line 186:FileSize:%d",tempFileSize);
+    qDebug("Connect.cpp Line 186:FileSize:%d",CompletedSize);
 
     QTimer::singleShot(0,this,[=]{
         qDebug() << "UpdateProgressTimer stop ID:" << QThread::currentThreadId();
@@ -207,7 +263,6 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     newFile.close();
 
 }
-
 
 void Connect::cliFileUpload(QString& QTargetPosition){
     Client cli(FullIP.toStdString(),Port);

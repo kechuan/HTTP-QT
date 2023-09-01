@@ -6,7 +6,7 @@
 
 #include "about.h"
 #include "ip_controlpanel.h" //sub .h include done.
-#include "propertieswidget.h"
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { 
@@ -41,7 +41,7 @@ private:
     Ui::MainWindow *ui; //从此Mainwindow下的指代的指针则为ui  MainWindow *ui = new Ui::MainWindow();
     About *AboutWindow;
     IP_controlPanel *IP_controlPanelWindow;
-    PropertiesWidget *DockWidget;
+
 
 private slots:
     void Tab_pressed();

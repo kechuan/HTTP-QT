@@ -33,7 +33,9 @@ private:
 
 signals:
     void Download(QTreeWidgetItem *DropItem);
-
+    void TaskPaused(QTreeWidgetItem *TaskItem);
+    void TaskContinue(QTreeWidgetItem *TaskItem);
+    void TaskCancel(QTreeWidgetItem *TaskItem);
 
 public slots:
    void clearStatusList();
@@ -49,6 +51,9 @@ public slots:
 
    void OpenFile(QTreeWidgetItem* listItem);
    void OpenFileFromFolder(QTreeWidgetItem* listItem);
+
+signals:
+   void DropFile();
 
 };
 

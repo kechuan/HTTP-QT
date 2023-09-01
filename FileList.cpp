@@ -17,8 +17,8 @@ FileList::FileList(QWidget *ParentWidget):QTreeWidget(ParentWidget){
 
     this->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-    this->header()->setSectionResizeMode(0,QHeaderView::Fixed);
-    this->setColumnWidth(0,40);
+    this->header()->setSectionResizeMode(0,QHeaderView::Fixed); //这条细则可以免受上述的自适应长度影响
+    this->setColumnWidth(0,60);
 
     QList<QString> InitalHeader{"Icon","Filename","Size"};
     this->setHeaderItem(new QTreeWidgetItem(InitalHeader));
@@ -58,7 +58,14 @@ void FileList::mouseMoveEvent(QMouseEvent *mouseMoveEvent){
     //热点基本上定义了拖动操作正在进行时拖动的像素图应位于的位置(固定)
     //    drag->setHotSpot(mouseMoveEvent->pos());
 
-    drag->exec(Qt::CopyAction | Qt::MoveAction, Qt::CopyAction);
+    int dragResult = drag->exec(Qt::CopyAction | Qt::MoveAction, Qt::CopyAction);
+    //这里exec插入枚举的意思是 执行drag时 允许的操作 即为 默认允许 所drag的widget的复制
+
+    //而 | 之后 则是按下ctrl键进入多选的模式
+
+    switch(dragResult){
+        case Qt::IgnoreAction: emit DropStop(); break;
+    }
 
 }
 

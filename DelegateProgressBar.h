@@ -28,7 +28,7 @@ public:
         );
         progress->setAlignment(Qt::AlignCenter);
 
-        progress->setFormat(QString::number(index.data(Qt::UserRole).toInt()) + "%");
+        progress->setFormat(QString::number(progress->value()) + "%"); //显示的文本格式
 
         painter->save(); //save the inital painter data.
 

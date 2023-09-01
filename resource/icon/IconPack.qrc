@@ -19,6 +19,7 @@
         <file>TypePack/icon-xls.svg</file>
         <file>TypePack/icon-Video.svg</file>
         <file>TypePack/icon-Image.svg</file>
+        <file>StatusPack/icon-PauseStatus.svg</file>
     </qresource>
     <qresource prefix="/icoPack">
         <file>title.ico</file>

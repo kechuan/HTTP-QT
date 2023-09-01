@@ -5,7 +5,6 @@
 
 #include <QDebug>
 #include <QObject>
-#include <QFileInfo>
 
 /*
 测试 如果仅引入ui文件 能不能令非ui体系 仅仅只是QObject能不能直接操纵引入的ui布局。
@@ -32,15 +31,19 @@ public:
 
     std::string ReadTheFile(QString &Qpath,std::string &Information);
 
-private:
-    void Abort();
+    //MultiThread new content
 
+
+private:
     Ui::MainWindow *m_ui;
+
+    void Abort();
 
 signals:
     void ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSpeed);
     void DownloadSpeedUpdate(float& bodySize);
     void ToasterShow(const QString& itemName);
+    void CancelNotice();
 
 public slots:
 

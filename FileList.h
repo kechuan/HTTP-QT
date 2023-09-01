@@ -24,6 +24,7 @@ public:
 signals:
     void Upload(QList<QUrl> &Droplist);
     void DragingFile();
+    void DropStop();
 
 };
 

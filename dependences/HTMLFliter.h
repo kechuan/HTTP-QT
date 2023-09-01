@@ -119,7 +119,7 @@ inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkV
 
 }
 
-inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, std::vector<std::string> &PathVector, std::vector<std::string> &NameVector, std::vector<std::string> &SizeVector,std::vector<int> &TypeVector){
+inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkVector, std::vector<std::string> &PathVector, std::vector<std::string> &NameVector, std::vector<std::string> &SizeVector,std::vector<char> &TypeVector){
     LinkVector.clear(); LinkVector.shrink_to_fit();
     PathVector.clear(); PathVector.shrink_to_fit();
     NameVector.clear(); NameVector.shrink_to_fit();

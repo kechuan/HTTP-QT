@@ -173,11 +173,6 @@
           </attribute>
           <column>
            <property name="text">
-            <string>Status</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
             <string>Filename</string>
            </property>
           </column>
@@ -203,9 +198,6 @@
           </column>
           <item>
            <property name="text">
-            <string>Downloading...</string>
-           </property>
-           <property name="text">
             <string>新建文本文档.txt</string>
            </property>
            <property name="text">
@@ -222,9 +214,6 @@
            </property>
           </item>
           <item>
-           <property name="text">
-            <string>Uploading...</string>
-           </property>
            <property name="text">
             <string>a FileDir</string>
            </property>

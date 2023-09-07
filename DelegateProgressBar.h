@@ -23,8 +23,15 @@ public:
 
         progress->setStyleSheet
         (
-            "QProgressBar {border: 2px solid grey;border-radius: 5px;background-color: #FFFFFF;}"
-            "QProgressBar::chunk {background-color: #CD96CD;width: 20px;}"
+            R"(
+                QProgressBar {border: 2px solid grey;border-radius: 8px;background-color: #FFFFFF;}
+                QProgressBar::chunk {
+                    background-color: qlineargradient(spread:pad,x1:0,y1:0,x2:1,y2:0,stop:0 #BD87C4,stop:1  #CD96CD);
+                    border-radius: 6px;
+                }
+
+            )"
+
         );
         progress->setAlignment(Qt::AlignCenter);
 

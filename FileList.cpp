@@ -1,4 +1,5 @@
 #include "FileList.h"
+#include "ip_controlpanel.h"
 
 #include <QDebug>
 #include <QDrag>
@@ -8,17 +9,42 @@
 #include <QWidget>
 #include <QHeaderView>
 
+enum SurfingFileColumn{
+    iconList,
+    nameList,
+    sizeList,
+    linkList
+};
+
+enum Type{
+    Dir,
+    Text,
+    Image,
+    Video,
+    Music,
+    Compress,
+    Code,
+    Unknown
+};
+
 extern QList<QTreeWidgetItem*> selectedFileList;
-extern QString ParentPath;
+extern QString parentPath;
+
+//extern std::vector<char> TypeVector;
+
+extern IP_controlPanel *IP_controlPanelWindow;
 
 QPoint dragStartPosition;
 
 FileList::FileList(QWidget *ParentWidget):QTreeWidget(ParentWidget){
 
-    this->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    QObject::connect(IP_controlPanelWindow,&IP_controlPanel::connetPressed,this,[=]{
+        this->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+        this->header()->setSectionResizeMode(0,QHeaderView::Fixed); //这条细则可以免受上述的自适应长度影响
+        this->setColumnWidth(0,60);
 
-    this->header()->setSectionResizeMode(0,QHeaderView::Fixed); //这条细则可以免受上述的自适应长度影响
-    this->setColumnWidth(0,60);
+    });
+
 
     QList<QString> InitalHeader{"Icon","Filename","Size"};
     this->setHeaderItem(new QTreeWidgetItem(InitalHeader));
@@ -39,6 +65,24 @@ FileList::FileList(QWidget *ParentWidget):QTreeWidget(ParentWidget){
 
 FileList::~FileList(){
     qDebug("FileList deleted");
+}
+
+
+void FileList::renderIcon(char &IconIndex){
+    auto RenderIcon = [=](const char *svgAdress){
+        this->topLevelItem(this->topLevelItemCount()-1)->setData(iconList, Qt::DecorationRole,QIcon(svgAdress).pixmap(QSize(26,26)));
+    };
+
+    switch(IconIndex){
+        case Dir: RenderIcon(R"(:/svgPack/TypePack/icon-Dir.svg)"); break;
+        case Text: RenderIcon(R"(:/svgPack/TypePack/icon-Text.svg)"); break;
+        case Image: RenderIcon(R"(:/svgPack/TypePack/icon-Image.svg)"); break;
+        case Video: RenderIcon(R"(:/svgPack/TypePack/icon-Video.svg)"); break;
+        case Music: RenderIcon(R"(:/svgPack/TypePack/icon-Music.svg)"); break;
+        case Compress: RenderIcon(R"(:/svgPack/TypePack/icon-Compress.svg)"); break;
+        case Code: RenderIcon(R"(:/svgPack/TypePack/icon-Code.svg)"); break;
+        case Unknown: RenderIcon(R"(:/svgPack/TypePack/icon-Unknown.svg)"); break;
+    }
 }
 
 void FileList::mouseMoveEvent(QMouseEvent *mouseMoveEvent){
@@ -75,7 +119,7 @@ void FileList::dragMoveEvent(QDragMoveEvent *dragMoveEvent){
 
 void FileList::dragEnterEvent(QDragEnterEvent *dragEnterEvent){
 
-    if(ParentPath.isEmpty()) dragEnterEvent->ignore(); //未获取目录信息前直接抛出)
+    if(parentPath.isEmpty()) dragEnterEvent->ignore(); //未获取目录信息前直接抛出)
 
     if(dragEnterEvent->mimeData()->hasUrls()){
         dragEnterEvent->acceptProposedAction();

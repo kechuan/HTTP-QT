@@ -81,8 +81,8 @@ std::string Connect::cliFileSurfing(){
     Client cli(FullIP.toStdString(),Port);
 
     auto res = cli.Get("/file",
-        [&](const char *data, size_t data_length) {
-          body.append(data, data_length);
+        [&](const char *data, size_t buffer_length) {
+          body.append(data, buffer_length);
           return true;
         });
 
@@ -94,8 +94,8 @@ std::string Connect::cliFileSurfing(QString& Postition){
     std::string body;
     Client cli(FullIP.toStdString(),Port);
     auto res = cli.Get(Postition.toStdString(),
-      [&](const char *data, size_t data_length) {
-        body.append(data, data_length);
+      [&](const char *data, size_t buffer_length) {
+        body.append(data, buffer_length);
         return true;
       });
     return body;
@@ -113,6 +113,10 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     std::string fileSize = itemSize.toStdString();
 
     qDebug("download trigger Link:%s",itemLink.toStdString().c_str());
+
+
+    //首先检验它是否真的存在 不存在直接创立该文件夹
+    std::filesystem::exists(Fullpath)?:std::filesystem::create_directory(Fullpath);
 
 
 //File Precreate Prevent storagePath Change Error.
@@ -146,9 +150,14 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     //状态与锁
     bool isPaused = false;
     bool isCanceled = false;
+    bool isLimited = false;
+
+    int LimitedBuffer;
+    char delayms;
 
     std::mutex Download_mtx;
     std::condition_variable Download_cv;
+//    std::condition_variable Limited_cv;
 
     QObject::connect(DockWidget,&PropertiesWidget::TaskPaused,this,[&](QTreeWidgetItem *TaskItem){
         if(TaskItem->text(0) == itemName){
@@ -175,12 +184,44 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
         }
     });
 
-    auto res = cli.Get(itemLink.toStdString(),
-      [&](const char *data, size_t data_length) {
-        //speedLimit思路
-        //std::this_thread::sleep_for(std::chrono::milliseconds(5)); //10ms -> 128KB/s
 
-        //MultiThread new content
+    QObject::connect(DockWidget,&PropertiesWidget::TaskSpeedLimit,this,[&](QTreeWidgetItem *TaskItem,int &bufferLength,char &ms){
+        if(TaskItem->text(0) == itemName){
+            std::unique_lock<std::mutex> Downloadlock(Download_mtx);
+            isLimited = true;
+            LimitedBuffer = bufferLength;
+            delayms = ms;
+
+        }
+    });
+
+    QObject::connect(DockWidget,&PropertiesWidget::TaskLimitSpeedCancel,this,[&](QTreeWidgetItem *TaskItem){
+        if(TaskItem->text(0) == itemName){
+            std::unique_lock<std::mutex> Downloadlock(Download_mtx);
+            isLimited = false;
+
+        }
+    });
+
+
+
+
+    auto res = cli.Get(itemLink.toStdString(),
+      [&](const char *data, size_t buffer_length) {
+
+        /* speedLimit Part
+         * 最简单粗暴的方法 更改delay数值以及buffer长度
+         * buffer_length 默认为 4096
+         */
+
+        if(isLimited){
+            buffer_length = LimitedBuffer;
+            std::this_thread::sleep_for(std::chrono::milliseconds(delayms));
+            //3072,1ms => 100KB/s
+        }
+
+
+        //Thread Pause Part
 
         std::unique_lock<std::mutex> DownloadLock(Download_mtx);
         Download_cv.wait(DownloadLock,[&]{
@@ -202,7 +243,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
         }
 
 
-        newFile.write(data,data_length); //4kb缓存写入
+        newFile.write(data,buffer_length); //4kb缓存写入
 
         if(UpdateProgressFlag){
             std::ifstream sizeDetected(std::filesystem::u8path(Fullpath),std::ios::binary|std::ios::ate);

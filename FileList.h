@@ -20,6 +20,8 @@ public:
 //    void mousePressEvent(QMouseEvent *mousePressEvent);
     void mouseMoveEvent(QMouseEvent *mouseMoveEvent);
 
+    void renderIcon(char &IconIndex);
+
 
 signals:
     void Upload(QList<QUrl> &Droplist);

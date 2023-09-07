@@ -21,7 +21,7 @@ extern std::vector<std::string> SizeVector;
 extern FileList *SurfingFile;
 extern Connect Client1; //共同使用Client1的数据
 
-bool ConnectedFlag = false;
+bool connectedFlag = false;
 
 IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
     QWidget(parent),
@@ -31,6 +31,7 @@ IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
     ui->setupUi(this);
 
     this->setWindowTitle("IP控制台");
+    this->setWindowFlag(Qt::WindowMaximizeButtonHint,false); //禁用winForm上的最大化按钮
 
     QObject::connect(ui->pushButton_Connect,SIGNAL(released()),this,SLOT(action_pressed()));
     QObject::connect(ui->pushButton_Abort,SIGNAL(released()),this,SLOT(action_pressed()));
@@ -149,7 +150,7 @@ void IP_controlPanel::action_pressed(){
 
             if(Client1.cliPing()){
                 log_view->append(R"(<span style=" color:#ffffff;">Ping Succ</span>)");
-                ConnectedFlag = true;
+                connectedFlag = true;
 
                 if(!ui->lineEdit_username->text().isEmpty()){
                     qDebug("username:%s",ui->lineEdit_username->text().toStdString().c_str());
@@ -183,7 +184,7 @@ void IP_controlPanel::action_pressed(){
             qDebug()<<"connect Abort.";
             ui->pushButton_Connect->setEnabled(true);
 
-            ConnectedFlag = false;
+            connectedFlag = false;
 
             SurfingFile->clear();
             QList<QString> newItemInformation{"To start","please config","setting->IP control Panel",""};

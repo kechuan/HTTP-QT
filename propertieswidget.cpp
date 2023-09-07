@@ -1,10 +1,12 @@
 #include "propertieswidget.h"
 #include "ui_propertieswidget.h"
 #include "DelegateProgressBar.h"
+#include "speedLimitPanel.h"
 
 #include "connect.h"
 #include "toaster.h"
 #include "./dependences/sizeTextHandler.h"
+
 
 #include <QtWidgets>
 #include <QThread>
@@ -31,10 +33,11 @@ enum StatusList{
 int PropTaskCount;
 double SpeedCount;
 
+speedLimitPanel *speedLimitDialog;
 extern Connect *Client1;
 extern std::string storagePath;
-extern QString ParentPath;
-extern bool ConnectedFlag;
+extern QString parentPath;
+extern bool connectedFlag;
 
 QList<QTreeWidgetItem*> selectedTaskList;
 extern QList<QTreeWidgetItem*> selectedFileList;
@@ -53,7 +56,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
 
     treeWidgetTaskQueue->setStyleSheet(R"(
-        QHeaderView::section{background:#B1EA14;}
+        QHeaderView::section{background:#F0DECB;}
     )");
 
     //列表可多选
@@ -156,13 +159,19 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
 
             for(int TaskIndex = 0;TaskIndex<PropTaskCount;TaskIndex++){
                 currentTask = treeWidgetTaskQueue->topLevelItem(TaskIndex);
+                QVariant StatusFlag = currentTask->data(FilenameList,Qt::UserRole).toInt();
 
-                if(currentTask->text(SpeedList)!="—"){
+                bool ActiveStatus = StatusFlag!=Paused&&StatusFlag!=Finished;
+
+                //Active Status
+                if(ActiveStatus){
                     std::string SpeedText = currentTask->text(SpeedList).toStdString();
                     qDebug("currentTask Name:%s,itemSpeed:%s",currentTask->text(FilenameList).toStdString().c_str(),currentTask->text(SpeedList).toStdString().c_str());
+
                     SpeedCount+=StringToSize(SpeedText);
                     DownloadingStatus = true; //只要有任一一项还在活跃的任务 监控继续
                 }
+
             }
 
             qDebug("totalSpeed: %fMB/s",SpeedCount/1024/1024);
@@ -194,12 +203,12 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem){
     if(listItem==nullptr) return false;
 
     if(qApp->mouseButtons() == Qt::RightButton){
-        QString ActiveStatus = listItem->text(SpeedList);
-
         QMenu *TaskList_popmenu = new QMenu;
 
         QAction *Pause = new QAction("Pause");
         QAction *Resume = new QAction("Resume");
+        QAction *SpeedLimit = new QAction("Speed Limit[Test]");
+        QAction *SpeedLimitCancel = new QAction("Limit Cancel[Test]");
 
         //Finished
         QAction *Open = new QAction("Open");
@@ -214,20 +223,27 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem){
 
         TaskList_popmenu->addAction(Pause);
         TaskList_popmenu->addAction(Resume);
+        TaskList_popmenu->addAction(SpeedLimit);
+        TaskList_popmenu->addAction(SpeedLimitCancel);
 
         TaskList_popmenu->addAction(Open_From_Folder);
         TaskList_popmenu->addAction(Remove);
 
-        //ActiveStatus 以 SpeedList 是否为 — 作判断
+        //ActiveStatus
+
+        QVariant Status = listItem->data(FilenameList,Qt::UserRole);
+
+
 
         //inActiveStatus
-        if(ActiveStatus=="—"){
+        if(Status==Paused||Status==Finished){
             //Pause Status
             Pause->setEnabled(false);
             Resume->setEnabled(true);
+            Open->setEnabled(false);
 
             //finished Status
-            if(listItem->text(DateTimeList) != "—"){
+            if(Status==Finished){
                 Open->setEnabled(true);
                 Pause->setEnabled(false);
                 Resume->setEnabled(false);
@@ -246,24 +262,28 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem){
         TaskList_popmenu->show();
 
 
-        QObject::connect(Pause,&QAction::triggered,this,[listItem,this](){StatusChanged(Paused,listItem);});
-        QObject::connect(Resume,&QAction::triggered,this,[listItem,this](){StatusChanged(Downloading,listItem);});
-
-        //Action Start
-        QObject::connect(
-            Open,
-            &QAction::triggered,
-            this,
-            [listItem,this](){
-                return OpenFile(listItem);
-            }
-        );
-
+        QObject::connect(Pause,&QAction::triggered,this,[listItem,this]{StatusChanged(Paused,listItem);});
+        QObject::connect(Resume,&QAction::triggered,this,[listItem,this]{StatusChanged(Downloading,listItem);});
+        QObject::connect(Open,&QAction::triggered,this,[listItem,this](){return OpenFile(listItem);});
         QObject::connect(Open_From_Folder,&QAction::triggered,this,[listItem,this](){return OpenFileFromFolder(listItem);});
+        QObject::connect(Remove,&QAction::triggered,this,[this]{deletePrompt(selectedTaskList);});
 
-        QObject::connect(Remove,&QAction::triggered,this,[this](){
-            deletePrompt(selectedTaskList);
+        QObject::connect(SpeedLimit,&QAction::triggered,this,[this, listItem](){
+            qDebug("Speed Limit");
+            speedLimitDialog = new speedLimitPanel(nullptr);
+            speedLimitDialog->exec();
+
+            if(!speedLimitDialog->BufferLength&&!speedLimitDialog->delayms) return;
+
+            emit TaskSpeedLimit(listItem,speedLimitDialog->BufferLength,speedLimitDialog->delayms);
+
         });
+
+        QObject::connect(SpeedLimitCancel,&QAction::triggered,this,[this, listItem](){
+            qDebug("Speed Limit Cancel");
+            emit TaskLimitSpeedCancel(listItem);
+        });
+
     }
 
     return false;
@@ -315,7 +335,7 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTaskList){
     }
 
     QPushButton *DeleteButton = DeleteConfirm.addButton("Delete",QMessageBox::AcceptRole);
-    QPushButton *DeniedButton = DeleteConfirm.addButton("ListItem Only",QMessageBox::NoRole);
+    QPushButton *ListItemOnly = DeleteConfirm.addButton("ListItem Only",QMessageBox::ActionRole);
     QPushButton *DiscardButton = DeleteConfirm.addButton("Discard",QMessageBox::RejectRole);
 
     DeleteConfirm.exec();
@@ -351,6 +371,7 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTaskList){
                         return;
                     }
 
+
                 }
 
             }
@@ -367,9 +388,42 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTaskList){
 
     }
 
-    else if(DeleteConfirm.clickedButton() == DeniedButton){
-        for(auto CurrentItem:selectedTaskList){
-            delete CurrentItem;
+    else if(DeleteConfirm.clickedButton() == ListItemOnly){
+        for(auto &CurrentItem:selectedTaskList){
+
+            if(CurrentItem->text(DateTimeList) == "—"){
+                std::condition_variable cancel_cv;
+                std::mutex cancel_mtx;
+                std::unique_lock<std::mutex> cancelLock(cancel_mtx);
+
+                bool isCancel = false;
+                QObject::connect(Client1,&Connect::CancelNotice,this,[&]{
+                    isCancel = true;
+                    cancel_cv.notify_one();
+                });
+
+                emit TaskCancel(CurrentItem);
+
+                //最多等待1s的任务暂停 这个有意思 像js的Date.now()
+                auto timeoutLine = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+
+                if(cancel_cv.wait_until(cancelLock,timeoutLine) == std::cv_status::timeout){
+
+                    if(!isCancel){
+                        qDebug("Task Cancel Succ.");
+                    }
+
+                    else{
+                        qDebug("Task Cancel Failed.");
+                        return;
+
+                    }
+
+                }
+
+            }
+
+            if(CurrentItem != nullptr) delete CurrentItem;
         }
     }
 
@@ -404,6 +458,7 @@ void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
 
     treeWidgetTaskQueue->topLevelItem(treeWidgetTaskQueue->topLevelItemCount()-1)->setTextAlignment(FilenameList,Qt::AlignVCenter);
     treeWidgetTaskQueue->topLevelItem(treeWidgetTaskQueue->topLevelItemCount()-1)->setData(FilenameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Pending.svg"));
+    treeWidgetTaskQueue->topLevelItem(treeWidgetTaskQueue->topLevelItemCount()-1)->setData(FilenameList, Qt::UserRole, Pending);
 
 }
 
@@ -438,6 +493,8 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
     switch(Status){
         case Downloading: {
             listItem->setData(FilenameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Downloading.svg").pixmap(QSize(20,20))); //数据更新
+            listItem->setData(FilenameList, Qt::UserRole, Downloading);
+            emit TaskContinue(listItem);
             break;
         }
 
@@ -449,6 +506,8 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
             emit TaskPaused(listItem);
             listItem->setText(SpeedList,"—");
             listItem->setData(FilenameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-PauseStatus.svg").pixmap(QSize(20,20))); //数据更新
+            listItem->setData(FilenameList, Qt::UserRole, Paused);
+
             break;
 
             //如果我要在这里发送暂停请求
@@ -462,6 +521,7 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
         case Finished:{
             qDebug("listItem:%s Status change. Status Code: %d",listItem->text(FilenameList).toStdString().c_str(),Status);
             listItem->setData(FilenameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Completed.svg").pixmap(QSize(20,20))); //数据更新
+            listItem->setData(FilenameList, Qt::UserRole, Finished);
             listItem->setText(DateTimeList,QTime::currentTime().toString());
 
             break;
@@ -496,8 +556,7 @@ void PropertiesWidget::ActionPressed(){
 
     if(button->objectName() == "pushButton_Continue"){
         for(auto& listItem:selectedTaskList){
-            if(listItem->text(SpeedList) == "—") continue;
-            emit TaskContinue(listItem);
+            if(listItem->data(FilenameList,Qt::UserRole) == Finished) continue;
             StatusChanged(Downloading,listItem);
         }
         return;
@@ -547,7 +606,7 @@ void PropertiesWidget::dragMoveEvent(QDragMoveEvent *dragMoveEvent){
 }
 
 void PropertiesWidget::dragEnterEvent(QDragEnterEvent *dragEnterEvent){
-    if(!ConnectedFlag) return;
+    if(!connectedFlag) return;
 
     if(dragEnterEvent->mimeData()->hasFormat("application/x-qwidget")){
         dragEnterEvent->acceptProposedAction();

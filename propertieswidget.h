@@ -31,11 +31,14 @@ public:
 private:
     Ui::MainWindow *m_ui;
 
+
 signals:
     void Download(QTreeWidgetItem *DropItem);
     void TaskPaused(QTreeWidgetItem *TaskItem);
     void TaskContinue(QTreeWidgetItem *TaskItem);
     void TaskCancel(QTreeWidgetItem *TaskItem);
+    void TaskSpeedLimit(QTreeWidgetItem *TaskItem,int &BufferLength,char &millonSeconds);
+    void TaskLimitSpeedCancel(QTreeWidgetItem *TaskItem);
 
 public slots:
    void clearStatusList();

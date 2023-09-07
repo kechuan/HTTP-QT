@@ -11,6 +11,7 @@
 #include "connect.h"
 #include "FileList.h"
 #include "toaster.h"
+#include "ip_controlpanel.h"
 
 //common Libs
 #include <string>
@@ -48,19 +49,20 @@ QString FullIP;int Port;
 
 QString rootPath = "/file";
 QString SurfingPath;
-QString ParentPath;
+QString parentPath;
 
 std::string storagePath = std::filesystem::current_path().string();
 
 bool m_status = false;
 
 short SplitterRecord;
-extern bool ConnectedFlag;
+extern bool connectedFlag;
 
 //全局对象 创立
 Connect *Client1;
 FileList *SurfingFile;
 PropertiesWidget *DockWidget;
+IP_controlPanel *IP_controlPanelWindow;
 
 QList<QTreeWidgetItem*> selectedFileList;
 
@@ -92,24 +94,16 @@ MainWindow::MainWindow(QWidget *parent)
     qDebug("FileShare_Splitter width:%d",FileShare_Splitter->size().width());
     qDebug("FileShare_Splitter Height:%d",FileShare_Splitter->size().height());
 
-    ui->widget_FileList->setGeometry(0,0,908,517);
-    SurfingFile->setGeometry(0,0,908,517);
+    ui->widget_FileList->resize(908,517);
+    SurfingFile->resize(908,517);
 
     DockWidget = new PropertiesWidget(ui->statusShow,ui); //显示在statusShow里
 
-    QObject::connect(FileShare_Splitter,&QSplitter::splitterMoved,this,[=](){
-        ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
-        SurfingFile->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
-        DockWidget->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
+    QObject::connect(FileShare_Splitter,&QSplitter::splitterMoved,this,[=](int index,int pos){
+        ui->widget_FileList->resize(FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
+        SurfingFile->resize(FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
+        DockWidget->resize(FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
         SplitterRecord = FileShare_Splitter->widget(1)->size().height();
-//        qDebug("Prop 1 Height:%d",FileShare_Splitter->widget(0)->size().height());
-//        qDebug("Prop 1 Width:%d",FileShare_Splitter->widget(0)->size().width());
-
-//        qDebug("SurfingFile Height:%d",SurfingFile->size().height());
-//        qDebug("SurfingFile Width:%d",SurfingFile->size().width());
-
-//        qDebug("Prop 2 Height:%d",FileShare_Splitter->widget(1)->size().height());
-//        qDebug("Prop 2 Width:%d",FileShare_Splitter->widget(1)->size().width());
 
     });
 
@@ -165,11 +159,23 @@ MainWindow::MainWindow(QWidget *parent)
         if(storagePathInput->isVisible()==false){
             storagePathInput->setVisible(true);
             Button_storageSurfingPath->setVisible(true);
+
+            QSplitter *FileShare_Splitter = ui->PropTools;
+            SplitterRecord = FileShare_Splitter->widget(1)->size().height();
+            SurfingFile->resize(FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
+            DockWidget->resize(FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
+
         }
 
         else{
             storagePathInput->setVisible(false);
             Button_storageSurfingPath->setVisible(false);
+
+            QSplitter *FileShare_Splitter = ui->PropTools;
+            SplitterRecord = FileShare_Splitter->widget(1)->size().height();
+
+            SurfingFile->resize(FileShare_Splitter->widget(0)->size().width(),SplitterRecord+storagePathInput->height()*2.3);
+//            DockWidget->resize(FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
         }
 
     });
@@ -236,14 +242,14 @@ MainWindow::MainWindow(QWidget *parent)
 
         //disable下
         if(!ui->statusShow->isEnabled()){
-            ui->widget_FileList->setGeometry(0,0,FileShare_Splitter->width(),FileShare_Splitter->height());
-            SurfingFile->setGeometry(0,0,FileShare_Splitter->width(),FileShare_Splitter->height());
+            ui->widget_FileList->resize(FileShare_Splitter->width(),FileShare_Splitter->height());
+            SurfingFile->resize(FileShare_Splitter->width(),FileShare_Splitter->height());
 
         }
 
         else{
             qDebug("Prop2.1 Height:%d", FileShare_Splitter->widget(1)->size().height());
-            SurfingFile->setGeometry(0,0,FileShare_Splitter->width(),FileShare_Splitter->widget(0)->size().height()-SplitterRecord);
+            SurfingFile->resize(FileShare_Splitter->width(),FileShare_Splitter->widget(0)->size().height()-SplitterRecord);
         }
 
     }); //item按下判断触发
@@ -409,7 +415,7 @@ qapplication
 bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
     //那么其逻辑实际上等于 treewidgetitem作用域+右键判断
     if(qApp->mouseButtons() != Qt::RightButton) return false;
-    if(!ConnectedFlag) return false; //未获取目录信息前直接抛出
+    if(!connectedFlag) return false; //未获取目录信息前直接抛出
 
     qDebug()<<"right triggered";
 
@@ -424,57 +430,24 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
     QAction *Rename = new QAction("Rename");
     QAction *Upload = new QAction("Upload Files here...");
 
-
     FileList_popmenu->addAction(Refresh);
     FileList_popmenu->addAction(Delete);
     FileList_popmenu->addAction(NewDir);
     FileList_popmenu->addAction(Rename);
     FileList_popmenu->addAction(Upload);
 
-    if(ParentPath == rootPath) Refresh->setEnabled(false); //不要在磁盘界面选择刷新
+    if(parentPath == rootPath) Refresh->setEnabled(false); //不要在磁盘界面选择刷新
 
 
     //signal Trigger add.
-    QObject::connect(
-        Refresh,
-        &QAction::triggered,
-        this,
-        [this](){   //捕获this 以引入函数执行主体 this->mainwindow
-            MainWindow::Refresh();
-        }
-    );
-
-    QObject::connect(
-        Delete,
-        &QAction::triggered,
-        this,
-        [this](){
-            MainWindow::Delete();
-        }
-    );
-
-    QObject::connect(
-        Rename,
-        &QAction::triggered,
-        this,
-        [this,listItem](){
-            MainWindow::Rename(listItem);
-            MainWindow::Refresh();
-        }
-    );
-
+    QObject::connect(Refresh,&QAction::triggered,this,&MainWindow::Refresh);   
     QObject::connect(NewDir,&QAction::triggered,this,&MainWindow::NewDir);
+    QObject::connect(Delete,&QAction::triggered,this,&MainWindow::Delete);
+
+    QObject::connect(Rename,&QAction::triggered,this,[this,listItem]{MainWindow::Rename(listItem);MainWindow::Refresh();});
+    QObject::connect(Upload,&QAction::triggered,this,[this]{MainWindow::Upload();MainWindow::Refresh();});
 
 
-    QObject::connect(
-        Upload,
-        &QAction::triggered,
-        this,
-        [this](){
-            MainWindow::Upload();
-            MainWindow::Refresh();
-        }
-    );
 
     if(itemSize!="—"){
         //file area
@@ -568,7 +541,7 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
 void MainWindow::itemAccess(QTreeWidgetItem *listItem){
 
 //这里的column代表这一行里点击的位置判定(Icon->0/FileName->1/Size->2...) 不过我并没有对column作出什么更改需求
-    if(!ConnectedFlag) return;
+    if(!connectedFlag) return;
 
 //  QString selectedFileListsIcon = listItem->text(iconList);
     QString selectedFileListsName = listItem->text(nameList);
@@ -769,13 +742,13 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
             */
 
             qDebug("上一级Path:%s",PathVector.at(PathVector.size()-2).c_str());
-            ParentPath = PathVector.at(PathVector.size()-2).c_str();
+            parentPath = PathVector.at(PathVector.size()-2).c_str();
             SurfingPath = PathVector.back().c_str();
         }
 
         else{
             qDebug("上一级Path:/files");
-            ParentPath = rootPath;
+            parentPath = rootPath;
         }
 
         // qDebug("%s",Information.c_str());
@@ -798,7 +771,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
         }
 
         else{
-            QList<QString> newItemInformation{"-","..","—",ParentPath};
+            QList<QString> newItemInformation{"-","..","—",parentPath};
             SurfingFile->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
             if(!NameVector.size()){
@@ -811,20 +784,22 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
                     QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
                     SurfingFile->addTopLevelItem(newItem);
 
-                    auto RenderIcon = [=](const char *svgAdress){
-                        SurfingFile->topLevelItem(SurfingFile->topLevelItemCount()-1)->setData(iconList, Qt::DecorationRole,QIcon(svgAdress).pixmap(QSize(26,26)));
-                    };
+                    SurfingFile->renderIcon(TypeVector.at(index));
 
-                    switch(TypeVector.at(index)){
-                        case Dir: RenderIcon(R"(:/svgPack/TypePack/icon-Dir.svg)"); break;
-                        case Text: RenderIcon(R"(:/svgPack/TypePack/icon-Text.svg)"); break;
-                        case Image: RenderIcon(R"(:/svgPack/TypePack/icon-Image.svg)"); break;
-                        case Video: RenderIcon(R"(:/svgPack/TypePack/icon-Video.svg)"); break;
-                        case Music: RenderIcon(R"(:/svgPack/TypePack/icon-Music.svg)"); break;
-                        case Compress: RenderIcon(R"(:/svgPack/TypePack/icon-Compress.svg)"); break;
-                        case Code: RenderIcon(R"(:/svgPack/TypePack/icon-Code.svg)"); break;
-                        case Unknown: RenderIcon(R"(:/svgPack/TypePack/icon-Unknown.svg)"); break;
-                    }
+//                    auto RenderIcon = [=](const char *svgAdress){
+//                        SurfingFile->topLevelItem(SurfingFile->topLevelItemCount()-1)->setData(iconList, Qt::DecorationRole,QIcon(svgAdress).pixmap(QSize(26,26)));
+//                    };
+
+//                    switch(TypeVector.at(index)){
+//                        case Dir: RenderIcon(R"(:/svgPack/TypePack/icon-Dir.svg)"); break;
+//                        case Text: RenderIcon(R"(:/svgPack/TypePack/icon-Text.svg)"); break;
+//                        case Image: RenderIcon(R"(:/svgPack/TypePack/icon-Image.svg)"); break;
+//                        case Video: RenderIcon(R"(:/svgPack/TypePack/icon-Video.svg)"); break;
+//                        case Music: RenderIcon(R"(:/svgPack/TypePack/icon-Music.svg)"); break;
+//                        case Compress: RenderIcon(R"(:/svgPack/TypePack/icon-Compress.svg)"); break;
+//                        case Code: RenderIcon(R"(:/svgPack/TypePack/icon-Code.svg)"); break;
+//                        case Unknown: RenderIcon(R"(:/svgPack/TypePack/icon-Unknown.svg)"); break;
+//                    }
                 }
             }
 
@@ -927,7 +902,7 @@ void MainWindow::Delete(){
 void MainWindow::Refresh(){
     SurfingFile->clear();
     qDebug("Surfingpath: %s",SurfingPath.toStdString().c_str());
-    QList<QString> newItemInformation{"-","..","—",ParentPath};
+    QList<QString> newItemInformation{"-","..","—",parentPath};
     SurfingFile->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
     std::string Information = Client1->cliFileSurfing(SurfingPath);
@@ -938,6 +913,7 @@ void MainWindow::Refresh(){
         QList<QString> newItemInformation{"",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
         QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
         SurfingFile->addTopLevelItem(newItem);
+        SurfingFile->renderIcon(TypeVector.at(index));
     }
 
 }
@@ -955,7 +931,8 @@ void MainWindow::Upload(){
         nullptr,
         tr("choose Files to upload"),
         "D:/All Local Downloads",
-        tr("texts(*.txt *.ini *.log *.md);;images(*.jpg *.jpeg *.png *.bmp);;video files(*.mp4 *.avi *.flv *.mkv);;All files(*.*)")
+        tr("All files(*.*);;texts(*.txt *json *.ini *.log *.md);;images(*.jpg *.jpeg *.png *.bmp *webp *gif *tiff);;video(*.mp4 *.avi *rmvb *.flv *.mkv)")
+         //此处设定文件选择窗口的筛选
     );
 
     if(UploadFiles.length()!=0){
@@ -978,7 +955,11 @@ void MainWindow::Upload(QList<QUrl>& DropList){
 
     for(auto& DropItem:DropList){
 
-        // file:///D:/cpp/app/HTTP-UI/HTTP-QT/connect.h erase -> D:/cpp/app/HTTP-UI/HTTP-QT/connect.h
+        /* file:///D:/cpp/app/HTTP-UI/HTTP-QT/connect.h erase
+         * ->
+         * D:/cpp/app/HTTP-UI/HTTP-QT/connect.h
+         *
+        */
         UploadVector.emplace_back(DropItem.toString().toStdString().erase(0,8));
     }
 
@@ -1040,8 +1021,8 @@ void MainWindow::closeEvent(QCloseEvent *closeEvent){
 void MainWindow::resizeEvent(QResizeEvent *resizeEvent){
     QSplitter *FileShare_Splitter = ui->PropTools;
     SplitterRecord = FileShare_Splitter->widget(1)->size().height();
-    SurfingFile->setGeometry(0,0,FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
-    DockWidget->setGeometry(0,0,FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
+    SurfingFile->resize(FileShare_Splitter->widget(0)->size().width(),FileShare_Splitter->widget(0)->size().height());
+    DockWidget->resize(FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
 }
 
 //快捷键定义区

@@ -5,7 +5,7 @@
 #include <QTreeWidgetItem>
 
 #include "about.h"
-#include "ip_controlpanel.h" //sub .h include done.
+
 
 
 QT_BEGIN_NAMESPACE
@@ -28,9 +28,8 @@ public:
 
     // void dragEnterEvent(QDragEnterEvent *dragEnterEvent);
     // void dropEvent(QDropEvent* dropEvent);
-//    void dragLeaveEvent(QDragLeaveEvent *dragLeaveEvent);
-
-//    void mousePressEvent(QMouseEvent *mousePressEvent);
+    // void dragLeaveEvent(QDragLeaveEvent *dragLeaveEvent);
+    // void mousePressEvent(QMouseEvent *mousePressEvent);
     void keyPressEvent(QKeyEvent *event);
 
 
@@ -40,7 +39,7 @@ public:
 private:
     Ui::MainWindow *ui; //从此Mainwindow下的指代的指针则为ui  MainWindow *ui = new Ui::MainWindow();
     About *AboutWindow;
-    IP_controlPanel *IP_controlPanelWindow;
+
 
 
 private slots:
@@ -66,9 +65,6 @@ private slots:
 
 signals:
     void connetPressed();
-
-    // void DownloadAction(const char* Status,QTreeWidgetItem*);
-
     void DockProgressCreate(QTreeWidgetItem *Item);
 
 };

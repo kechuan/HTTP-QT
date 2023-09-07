@@ -53,7 +53,7 @@ void Toaster::DownloadToaster(const QString& FileName){
         "font:18px;"
     );
 
-    Toaster->resize(QSize(600,40));
+//    Toaster->resize(QSize(600,Toaster->height()));
 
     QPropertyAnimation *ToasterShow = new QPropertyAnimation(Toaster,"pos");
     QSequentialAnimationGroup *ToasterAnimation = new QSequentialAnimationGroup(this);
@@ -70,15 +70,20 @@ void Toaster::DownloadToaster(const QString& FileName){
         ToasterShow->setEndValue(m_ui->toolWidget->mapToParent(QPoint(m_ui->toolWidget->width()*0.23,-(m_ui->toolWidget->height())*1.2)));
 
         //字数显示上限
-
-        QString ToasterFileName;
-        if(FileName.size()>120){
-            QString ToasterFileName = FileName.sliced(0,120);
+        if(FileName.size()>50){
+            QString ToasterFileName = FileName.sliced(0,50);
             ToasterFileName.append("...");
+            pushButton_navBar->setText(ToasterFileName+" finished.");
+            Toaster->resize(QSize(650,Toaster->height()));
+
+            ToasterShow->setStartValue(m_ui->toolWidget->mapToParent(QPoint(m_ui->toolWidget->width()*0.15,-(m_ui->toolWidget->height()))));
+            ToasterShow->setEndValue(m_ui->toolWidget->mapToParent(QPoint(m_ui->toolWidget->width()*0.15,-(m_ui->toolWidget->height())*1.2)));
         }
 
-        pushButton_navBar->setText(ToasterFileName+" finshed.");
-        pushButton_navBar->adjustSize();
+        else{
+            pushButton_navBar->setText(FileName+" finished.");
+            Toaster->adjustSize();
+        }
 
         ToasterAnimation->start();
 
@@ -152,6 +157,8 @@ void Toaster::DragingToaster(){
     FadingAnimation->setEasingCurve(QEasingCurve::Linear);
 
     if(DragToaster->isHidden()){
+
+
         ToasterShow->setStartValue(QPoint(static_cast<int>(prop_ui->treeWidgetTaskQueue->width()/8),static_cast<int>(prop_ui->treeWidgetTaskQueue->height()/2)));
         ToasterShow->setEndValue(QPoint(static_cast<int>(prop_ui->treeWidgetTaskQueue->width()/8),static_cast<int>(prop_ui->treeWidgetTaskQueue->height()/2)));
 

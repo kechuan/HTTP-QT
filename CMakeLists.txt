@@ -32,6 +32,8 @@ set(PROJECT_SOURCES
         DelegateProgressBar.h
         FileList.h FileList.cpp
         toaster.h toaster.cpp toaster.ui
+        speedLimitPanel.h speedLimitPanel.cpp speedLimitPanel.ui
+
 
         ${TS_FILES}
 )

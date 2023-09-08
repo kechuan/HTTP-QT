@@ -37,6 +37,12 @@ enum SurfingFileColumn{
     linkList
 };
 
+enum AccessType{
+    Guest,
+    User,
+    Admin
+};
+
 std::vector<std::string> LinkVector = {};
 std::vector<std::string> PathVector = {};
 std::vector<std::string> NameVector = {};
@@ -54,6 +60,7 @@ QString parentPath;
 std::string storagePath = std::filesystem::current_path().string();
 
 bool m_status = false;
+int AccessLevel = Guest;
 
 short SplitterRecord;
 extern bool connectedFlag;
@@ -171,11 +178,13 @@ MainWindow::MainWindow(QWidget *parent)
             storagePathInput->setVisible(false);
             Button_storageSurfingPath->setVisible(false);
 
-            QSplitter *FileShare_Splitter = ui->PropTools;
-            SplitterRecord = FileShare_Splitter->widget(1)->size().height();
+            if(DockWidget->isVisible()){
+                QSplitter *FileShare_Splitter = ui->PropTools;
+                SplitterRecord = FileShare_Splitter->widget(1)->size().height();
 
-            SurfingFile->resize(FileShare_Splitter->widget(0)->size().width(),SplitterRecord+storagePathInput->height()*2.3);
-//            DockWidget->resize(FileShare_Splitter->widget(1)->size().width(),FileShare_Splitter->widget(1)->size().height());
+                SurfingFile->resize(FileShare_Splitter->widget(0)->size().width(),SplitterRecord+storagePathInput->height()*2.4);
+            }
+
         }
 
     });
@@ -256,7 +265,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     QObject::connect(ui->tabWidget_contentShow,&QTabWidget::tabBarClicked,this,&MainWindow::LostSelection);
 
-    QObject::connect(this,&MainWindow::connetPressed,DockWidget,&PropertiesWidget::clearStatusList);
     QObject::connect(IP_controlPanelWindow,&IP_controlPanel::connetPressed,DockWidget,&PropertiesWidget::clearStatusList);
 
     //QObject是一个抽象类 似乎因为如此 connect需要用引用符号获得它的地址来进行操作
@@ -423,12 +431,19 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
     QString itemSize = listItem->text(sizeList);
     QMenu *FileList_popmenu = new QMenu;
 
-    //general way
+    //Guest
     QAction *Refresh = new QAction("Refresh");
-    QAction *Delete = new QAction("Delete");
-    QAction *NewDir = new QAction("NewDir");
-    QAction *Rename = new QAction("Rename");
+    QAction *Open;
+    QAction *Download;
+
+    //User
     QAction *Upload = new QAction("Upload Files here...");
+    QAction *NewDir = new QAction("NewDir");
+
+    //Admin
+    QAction *Delete = new QAction("Delete");
+    QAction *Rename = new QAction("Rename");
+
 
     FileList_popmenu->addAction(Refresh);
     FileList_popmenu->addAction(Delete);
@@ -437,7 +452,6 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
     FileList_popmenu->addAction(Upload);
 
     if(parentPath == rootPath) Refresh->setEnabled(false); //不要在磁盘界面选择刷新
-
 
     //signal Trigger add.
     QObject::connect(Refresh,&QAction::triggered,this,&MainWindow::Refresh);   
@@ -448,16 +462,11 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
     QObject::connect(Upload,&QAction::triggered,this,[this]{MainWindow::Upload();MainWindow::Refresh();});
 
 
-
+    //在弹出之前 先过一个纯File判断
     if(itemSize!="—"){
         //file area
         qDebug("right clicked the file");
-        QAction *Download = new QAction("Download");
-
-        //奇怪的思路 居然是先指定action2然后再让action1插入到action2的前面
-        //而不是直接声明action1 插入到 action2之前
-
-        //在弹出之前 先过一个纯File判断
+        Download = new QAction("Download");
 
         QTreeWidget *Filelist = SurfingFile;
         selectedFileList = Filelist->selectedItems();
@@ -482,8 +491,9 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
 
         }
 
+        FileList_popmenu->insertAction(Refresh,Download); //将Refresh 插入到Download之前
 
-        FileList_popmenu->insertAction(Refresh,Download);
+
         //signal Trigger add. but new QT5 string
 
         QObject::connect(
@@ -504,9 +514,10 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
     else{
         //dir area
         qDebug("right clicked the Dir");
+        Open = new QAction("Open");
 
         //Action add.
-        QAction *Open = new QAction("Open");
+
 
         std::smatch match;
 
@@ -531,10 +542,32 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
 
     }
 
-     FileList_popmenu->move(SurfingFile->cursor().pos());    //菜单显示在鼠标点击的位置
-     FileList_popmenu->show();
+    //最后来个鉴权判定
+    switch(AccessLevel){
+        case Guest:{
+            Delete->setEnabled(false);
+            Rename->setEnabled(false);
+            NewDir->setEnabled(false);
+            Upload->setEnabled(false);
+            break;
+        }
 
-     return true;
+        case User:{
+            Delete->setEnabled(false);
+            Rename->setEnabled(false);
+            break;
+        }
+
+        case Admin:{
+            //nothing to Limit
+            break;
+        }
+    }
+
+    FileList_popmenu->move(SurfingFile->cursor().pos());    //菜单显示在鼠标点击的位置
+    FileList_popmenu->show();
+
+    return true;
 
 }
 
@@ -998,10 +1031,6 @@ void MainWindow::showStatus(bool &m_status){
         m_status = false;
     }
     
-}
-
-void MainWindow::clearStatusList(){
-    qDebug("clear your List");
 }
 
 //事件定义区

@@ -19,9 +19,18 @@ extern std::vector<std::string> NameVector;
 extern std::vector<std::string> SizeVector;
 
 extern FileList *SurfingFile;
-extern Connect Client1; //共同使用Client1的数据
+extern Connect *Client1;
+extern int AccessLevel;
 
 bool connectedFlag = false;
+
+enum AccessType{
+    Guest,
+    User,
+    Admin
+};
+
+
 
 IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):
     QWidget(parent),
@@ -146,25 +155,53 @@ void IP_controlPanel::action_pressed(){
             FullIP = QString("%1.%2.%3.%4").arg(ui->lineEdit_IP_1->text(),ui->lineEdit_IP_2->text(),ui->lineEdit_IP_3->text(),ui->lineEdit_IP_4->text());
             Port = ui->lineEdit_Port->text().toInt();
 
-            log_view->append(R"(<span style=" color:#ffffff;">)"+buttonName+" "+FullIP+":"+ui->lineEdit_Port->text()+R"(</span>)");
+            log_view->append(R"(<span style=" color:#ffffff;"> Trying)"+buttonName+" "+FullIP+":"+ui->lineEdit_Port->text()+R"(</span>)");
 
-            if(Client1.cliPing()){
+            if(Client1->cliPing()){
                 log_view->append(R"(<span style=" color:#ffffff;">Ping Succ</span>)");
-                connectedFlag = true;
 
+
+                //Login Mode
                 if(!ui->lineEdit_username->text().isEmpty()){
                     qDebug("username:%s",ui->lineEdit_username->text().toStdString().c_str());
                     qDebug("password:%s",ui->lineEdit_password->text().toStdString().c_str());
+
+                    QString username = ui->lineEdit_username->text();
+                    QString password = ui->lineEdit_password->text();
+
+                    Client1->cliLogin(username,password);
+
+                        //鉴权步骤(选择)
+                        //1.账号/密码错误是否以游客身份访问
+                        if(AccessLevel==Guest){
+                            int choice = QMessageBox::question(this,tr("Authentification Fault"),tr("Account or Password wrong.\nWanna insert Information again(Y) or Accessing Server with Guest Mode(N)."),QMessageBox::Yes|QMessageBox::No);
+
+                        //2.重输入->失败返回1 建议在后端服务器加上账号保护验证.不过也只能保护账号 不能防恶意输入
+                        //不然算法的引入 我怕体量一下涨一堆
+                            switch(choice){
+                                case QMessageBox::Yes: {
+                                    ui->lineEdit_password->clear();
+                                    log_view->append(R"(<span style=" color:#ffffff;">Login Failed.</span>)");
+                                    return;
+                                }
+                                case QMessageBox::No: {break;}
+                            }
+
+                        }
+
                 }
 
-                std::string Information = Client1.cliFileSurfing();
+
+
+                connectedFlag = true;
+                std::string Information = Client1->cliFileSurfing();
                 HTMLExtract(Information,LinkVector,NameVector);
 
                 SurfingFile->clear();
                 emit connetPressed();
 
                 for(int index = 0;index<=NameVector.size()-1;index++){
-                    QList<QString> newItemInformation{"-",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
+                    QList<QString> newItemInformation{"Disk",NameVector.at(index).c_str(),"—",LinkVector.at(index).c_str()};
                     QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
                     SurfingFile->addTopLevelItem(newItem);
                 }

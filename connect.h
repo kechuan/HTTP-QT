@@ -29,6 +29,8 @@ public:
     void cliFileDelete(QList<QString>& TargetPosition);
     void cliFileRename(QString& oldItem,QString& newFileName);
 
+    void cliLogin(QString& username,QString& password);
+
     std::string ReadTheFile(QString &Qpath,std::string &Information);
 
     //MultiThread new content

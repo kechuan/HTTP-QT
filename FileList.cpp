@@ -30,9 +30,8 @@ enum Type{
 extern QList<QTreeWidgetItem*> selectedFileList;
 extern QString parentPath;
 
-//extern std::vector<char> TypeVector;
-
 extern IP_controlPanel *IP_controlPanelWindow;
+extern int AccessLevel;
 
 QPoint dragStartPosition;
 

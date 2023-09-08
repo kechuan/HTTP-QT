@@ -25,10 +25,16 @@ extern PropertiesWidget *DockWidget;
 
 extern QString FullIP;
 extern int Port;
+extern int AccessLevel;
 
 QTimer *UpdateProgressTimer;
 bool UpdateProgressFlag = false;
 
+enum AccessType{
+    Guest,
+    User,
+    Admin
+};
 
 clock_t start_t;
 clock_t finish_t;
@@ -368,6 +374,34 @@ void Connect::cliFileRename(QString& oldItem,QString& newFileName){
 
             auto RenameAction = cli.Post("/rename",RenameParams);
         }
+    }
+}
+
+void Connect::cliLogin(QString& username,QString& password){
+    Client cli(FullIP.toStdString(),Port);
+
+    httplib::Params LoginParams;
+
+    if(auto ping = cli.Post("/ping")){
+        if(ping->status==200){
+            qDebug()<<"server ok";
+
+            LoginParams.emplace("username",username.toStdString());
+            LoginParams.emplace("password",password.toStdString());
+
+            if(auto LoginAction = cli.Post("/apiLogin",LoginParams)){
+                if( LoginAction->status == 200){
+                    qDebug("AccessLevel:%s",LoginAction->body.c_str());
+
+                    if(LoginAction->body == "Guest") AccessLevel = Guest;
+                    if(LoginAction->body == "User") AccessLevel = User;
+                    if(LoginAction->body == "Admin") AccessLevel = Admin;
+
+                }
+            }
+        }
+
+
     }
 }
 

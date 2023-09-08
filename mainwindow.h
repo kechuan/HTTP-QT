@@ -59,12 +59,10 @@ private slots:
 /*Function Area */
     void LostSelection();
     void showStatus(bool&);
-    void clearStatusList();
 
 
 
 signals:
-    void connetPressed();
     void DockProgressCreate(QTreeWidgetItem *Item);
 
 };

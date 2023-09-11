@@ -6,12 +6,14 @@
 
 //dependences Lib
 #include "./dependences/HTMLFliter.h"
+#include "./dependences/enumIndex.h"
 
 //util Libs
 #include "connect.h"
 #include "FileList.h"
 #include "toaster.h"
 #include "ip_controlpanel.h"
+
 
 //common Libs
 #include <string>
@@ -29,19 +31,6 @@
 #include <QParallelAnimationGroup>
 #include <QDropEvent>
 #include <QDragLeaveEvent>
-
-enum SurfingFileColumn{
-    iconList,
-    nameList,
-    sizeList,
-    linkList
-};
-
-enum AccessType{
-    Guest,
-    User,
-    Admin
-};
 
 std::vector<std::string> LinkVector = {};
 std::vector<std::string> PathVector = {};

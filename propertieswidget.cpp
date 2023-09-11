@@ -5,30 +5,14 @@
 
 #include "connect.h"
 #include "toaster.h"
+
 #include "./dependences/sizeTextHandler.h"
+#include "./dependences/enumIndex.h"
 
 
 #include <QtWidgets>
 #include <QThread>
 #include <QTimer>
-
-enum QueueList{
-    FilenameList,
-    ProgressList,
-    SizeList,
-    SpeedList,
-    DateTimeList,
-    StoragePathList,
-};
-
-enum StatusList{
-    Pending,
-    Downloading,
-    Uploading,
-    Paused,
-    Finished,
-    Failed,
-};
 
 int PropTaskCount;
 double SpeedCount;

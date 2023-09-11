@@ -1,6 +1,8 @@
 #include "FileList.h"
 #include "ip_controlpanel.h"
 
+#include "./dependences/enumIndex.h"
+
 #include <QDebug>
 #include <QDrag>
 #include <QDropEvent>
@@ -9,23 +11,6 @@
 #include <QWidget>
 #include <QHeaderView>
 
-enum SurfingFileColumn{
-    iconList,
-    nameList,
-    sizeList,
-    linkList
-};
-
-enum Type{
-    Dir,
-    Text,
-    Image,
-    Video,
-    Music,
-    Compress,
-    Code,
-    Unknown
-};
 
 extern QList<QTreeWidgetItem*> selectedFileList;
 extern QString parentPath;
@@ -80,7 +65,7 @@ void FileList::renderIcon(char &IconIndex){
         case Music: RenderIcon(R"(:/svgPack/TypePack/icon-Music.svg)"); break;
         case Compress: RenderIcon(R"(:/svgPack/TypePack/icon-Compress.svg)"); break;
         case Code: RenderIcon(R"(:/svgPack/TypePack/icon-Code.svg)"); break;
-        case Unknown: RenderIcon(R"(:/svgPack/TypePack/icon-Unknown.svg)"); break;
+        case UnknownFile: RenderIcon(R"(:/svgPack/TypePack/icon-Unknown.svg)"); break;
     }
 }
 

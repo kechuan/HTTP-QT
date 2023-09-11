@@ -20,7 +20,7 @@ public:
     explicit Toaster(QWidget *parent = nullptr,Ui::PropertiesWidget *prop_ui = nullptr);
     ~Toaster();
 
-    void DownloadToaster(const QString& FileName);
+    void DownloadToaster(const QString& FileName,const int& status);
     void DragingToaster();
 
 private:

@@ -26,6 +26,7 @@ set(PROJECT_SOURCES
         ./dependences/HTMLFliter.h
         ./dependences/sizeTextHandler.h
         ./dependences/sizeTextHandler.cpp
+        ./dependences/enumIndex.h
         connect.h connect.cpp
         ip_controlpanel.h ip_controlpanel.cpp ip_controlpanel.ui
         propertieswidget.h propertieswidget.cpp propertieswidget.ui
@@ -33,6 +34,8 @@ set(PROJECT_SOURCES
         FileList.h FileList.cpp
         toaster.h toaster.cpp toaster.ui
         speedLimitPanel.h speedLimitPanel.cpp speedLimitPanel.ui
+
+
 
 
         ${TS_FILES}

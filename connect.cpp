@@ -9,6 +9,7 @@
 
 #include "./dependences/extern_lib/httplib.h"
 #include "./dependences/sizeTextHandler.h"
+#include "./dependences/enumIndex.h"
 
 #include <QTimer>
 #include <ctime>
@@ -29,12 +30,6 @@ extern int AccessLevel;
 
 QTimer *UpdateProgressTimer;
 bool UpdateProgressFlag = false;
-
-enum AccessType{
-    Guest,
-    User,
-    Admin
-};
 
 clock_t start_t;
 clock_t finish_t;
@@ -96,7 +91,7 @@ std::string Connect::cliFileSurfing(){
 
 }
 
-std::string Connect::cliFileSurfing(QString& Postition){
+std::string Connect::cliFileSurfing(const QString& Postition){
     std::string body;
     Client cli(FullIP.toStdString(),Port);
     auto res = cli.Get(Postition.toStdString(),
@@ -108,7 +103,7 @@ std::string Connect::cliFileSurfing(QString& Postition){
 }
 
 
-void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemLink){
+void Connect::cliFileDownload(const QString& itemName,const QString& itemSize,const QString& itemLink){
 
     qDebug() << "Connect.cpp Line 101: thread cliFileDownload" << QThread::currentThreadId();
 
@@ -209,9 +204,6 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
         }
     });
 
-
-
-
     auto res = cli.Get(itemLink.toStdString(),
       [&](const char *data, size_t buffer_length) {
 
@@ -236,6 +228,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
                 if(isCanceled){
                     return isPaused;
                 }
+                ToasterAction(itemName,TaskPaused);
             }
             return !isPaused;
         });
@@ -245,6 +238,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
             qDebug() << "Download: Canceled.";
             newFile.close();
             emit CancelNotice();
+            ToasterAction(itemName,TaskCanceled);
             return false;
         }
 
@@ -291,7 +285,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
     qDebug("CPU 占用的总时间:%f\n", total_t);
 
     emit ProgressUpdate(itemName,100,"—");
-    emit ToasterShow(itemName);
+    emit ToasterAction(itemName,TaskCompleted);
 
     if(!CompletedSize){
         std::ifstream sizeDetected(std::filesystem::u8path(Fullpath),std::ios::binary|std::ios::ate);
@@ -311,7 +305,7 @@ void Connect::cliFileDownload(QString& itemName,QString& itemSize,QString& itemL
 
 }
 
-void Connect::cliFileUpload(QString& QTargetPosition){
+void Connect::cliFileUpload(const QString& QTargetPosition){
     Client cli(FullIP.toStdString(),Port);
 
     std::string TargetPosition = QTargetPosition.toStdString().c_str();
@@ -360,7 +354,7 @@ void Connect::cliFileUpload(QString& QTargetPosition){
 
 }
 
-void Connect::cliFileRename(QString& oldItem,QString& newFileName){
+void Connect::cliFileRename(const QString& oldItem,const QString& newFileName){
     Client cli(FullIP.toStdString(),Port);
 
     httplib::Params RenameParams;
@@ -377,7 +371,7 @@ void Connect::cliFileRename(QString& oldItem,QString& newFileName){
     }
 }
 
-void Connect::cliLogin(QString& username,QString& password){
+void Connect::cliLogin(const QString& username,const QString& password){
     Client cli(FullIP.toStdString(),Port);
 
     httplib::Params LoginParams;
@@ -406,7 +400,7 @@ void Connect::cliLogin(QString& username,QString& password){
 }
 
 
-void Connect::cliFileDelete(QList<QString>& TargetPosition){
+void Connect::cliFileDelete(const QList<QString>& TargetPosition){
     Client cli(FullIP.toStdString(),Port);
 
     httplib::Params DeleteParams;
@@ -427,7 +421,7 @@ void Connect::cliFileDelete(QList<QString>& TargetPosition){
 
 }
 
-void ReadTheFile(QString &Qpath,std::string &Information){
+void ReadTheFile(const QString &Qpath,std::string &Information){
     std::ifstream TargetFile;
     std::string path = Qpath.toStdString();
 

@@ -21,17 +21,17 @@ public:
     bool cliPing();
 
     std::string cliFileSurfing();
-    std::string cliFileSurfing(QString& Postition);
+    std::string cliFileSurfing(const QString& Postition);
     
-    void cliFileDownload(QString& itemName,QString& itemSize,QString& itemLink);
-    void cliFileUpload(QString& TargetPosition);
+    void cliFileDownload(const QString& itemName,const QString& itemSize,const QString& itemLink);
+    void cliFileUpload(const QString& TargetPosition);
 
-    void cliFileDelete(QList<QString>& TargetPosition);
-    void cliFileRename(QString& oldItem,QString& newFileName);
+    void cliFileDelete(const QList<QString>& TargetPosition);
+    void cliFileRename(const QString& oldItem,const QString& newFileName);
 
-    void cliLogin(QString& username,QString& password);
+    void cliLogin(const QString& username,const QString& password);
 
-    std::string ReadTheFile(QString &Qpath,std::string &Information);
+    std::string ReadTheFile(const QString &Qpath,std::string &Information);
 
     //MultiThread new content
 
@@ -44,7 +44,9 @@ private:
 signals:
     void ProgressUpdate(const QString& itemName,const float& Progress,const QString& itemSpeed);
     void DownloadSpeedUpdate(float& bodySize);
-    void ToasterShow(const QString& itemName);
+
+    void ToasterAction(const QString& itemName,const int &status);
+
     void CancelNotice();
 
 public slots:

@@ -4,6 +4,7 @@
 #include <regex>
 #include <string>
 #include <QDebug>
+#include "enumIndex.h"
 
 inline std::regex DiskReg(R"(\w:)");
 inline std::regex HTMLLinkReg(R"(<\s*a\s+[^>]*href\s*=\s*"([^/view/]+[^"]*))", std::regex::icase);                      //target group1
@@ -19,17 +20,6 @@ inline std::regex list(R"(<div\s*id=\"list\">)");
 //inline std::regex HTMLTypeFliter(R"(<use\sxlink:href="#ext-(\w+)[^>])"); //catchGroup 1
 
 inline std::smatch matches;
-
-enum Type{
-    Dir,
-    Text,
-    Image,
-    Video,
-    Music,
-    Compress,
-    Code,
-    Unknown
-};
 
 inline int TypeJudge(std::string& FileNameSuffix){
 
@@ -62,7 +52,7 @@ inline int TypeJudge(std::string& FileNameSuffix){
         ++fliterIndex;
     }
 
-    return Unknown;
+    return UnknownFile;
 
 }
 

@@ -14,6 +14,12 @@ extern Connect *Client1;
 extern FileList *SurfingFile;
 extern PropertiesWidget *DockWidget;
 
+enum TaskStatus{
+    Completed,
+    Paused,
+    Canceled
+};
+
 Toaster::Toaster(QWidget *parent,Ui::MainWindow *m_ui) :
     QWidget(parent),
     ui(new Ui::Toaster),
@@ -24,7 +30,7 @@ Toaster::Toaster(QWidget *parent,Ui::MainWindow *m_ui) :
     QWidget *Toaster = this;
     Toaster->hide();
 
-    QObject::connect(Client1,&Connect::ToasterShow,this,&Toaster::DownloadToaster);
+    QObject::connect(Client1,&Connect::ToasterAction,this,&Toaster::DownloadToaster);
 
 }
 
@@ -42,18 +48,9 @@ Toaster::Toaster(QWidget *parent,Ui::PropertiesWidget *prop_ui) :
 
 }
 
-void Toaster::DownloadToaster(const QString& FileName){
+void Toaster::DownloadToaster(const QString& FileName,const int& status){
     QWidget *Toaster = this;
-
     QPushButton *pushButton_navBar = ui->pushButton_navBar;
-    pushButton_navBar->setStyleSheet(
-        "background-color:#118CED;"
-        "border-radius:15px;"
-        "color:black;"
-        "font:18px;"
-    );
-
-//    Toaster->resize(QSize(600,Toaster->height()));
 
     QPropertyAnimation *ToasterShow = new QPropertyAnimation(Toaster,"pos");
     QSequentialAnimationGroup *ToasterAnimation = new QSequentialAnimationGroup(this);
@@ -70,19 +67,68 @@ void Toaster::DownloadToaster(const QString& FileName){
         ToasterShow->setEndValue(m_ui->toolWidget->mapToParent(QPoint(m_ui->toolWidget->width()*0.23,-(m_ui->toolWidget->height())*1.2)));
 
         //字数显示上限
+
+        QString ToasterFileName;
         if(FileName.size()>50){
-            QString ToasterFileName = FileName.sliced(0,50);
+            ToasterFileName = FileName.sliced(0,50);
             ToasterFileName.append("...");
-            pushButton_navBar->setText(ToasterFileName+" finished.");
-            Toaster->resize(QSize(650,Toaster->height()));
+            
+            Toaster->resize(QSize(666,Toaster->height()));
 
             ToasterShow->setStartValue(m_ui->toolWidget->mapToParent(QPoint(m_ui->toolWidget->width()*0.15,-(m_ui->toolWidget->height()))));
             ToasterShow->setEndValue(m_ui->toolWidget->mapToParent(QPoint(m_ui->toolWidget->width()*0.15,-(m_ui->toolWidget->height())*1.2)));
         }
 
         else{
-            pushButton_navBar->setText(FileName+" finished.");
+            ToasterFileName = FileName;
             Toaster->adjustSize();
+        }
+
+        switch(status){
+            case Completed:{
+                pushButton_navBar->setStyleSheet(
+                    R"(
+                        border-radius:15px;
+                        font:18px;
+                        color:black;
+                        background-color:#118CED;
+                    )"
+                );
+
+                pushButton_navBar->setIcon(QIcon(":/svgPack/StatusPack/icon-Completed.svg").pixmap(QSize(32,32)));
+                pushButton_navBar->setText(ToasterFileName+" Finished.");
+                break;
+            };
+
+            case Paused:{
+                pushButton_navBar->setStyleSheet(
+                    R"(
+                        border-radius:15px;
+                        font:18px;
+                        color:black;
+                        background-color:#F7B507;
+                    )"
+                );
+
+                pushButton_navBar->setIcon(QIcon(":/svgPack/StatusPack/icon-Pause.svg").pixmap(QSize(32,32)));
+                pushButton_navBar->setText(ToasterFileName+" Paused.");
+                break;
+            };
+
+            case Canceled:{
+                pushButton_navBar->setStyleSheet(
+                    R"(
+                        border-radius:15px;
+                        font:18px;
+                        color:black;
+                        background-color:#F1270D;
+                    )"
+                );
+
+                pushButton_navBar->setIcon(QIcon(":/svgPack/StatusPack/icon-Remove.svg").pixmap(QSize(32,32)));
+                pushButton_navBar->setText(ToasterFileName+" Canceled.");
+                break;
+            };
         }
 
         ToasterAnimation->start();

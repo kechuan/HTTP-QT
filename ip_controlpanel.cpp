@@ -4,6 +4,7 @@
 #include "ui_ip_controlpanel.h"
 
 #include "./dependences/HTMLFliter.h"
+#include "./dependences/enumIndex.h"
 
 #include "connect.h"
 #include "FileList.h"
@@ -23,13 +24,6 @@ extern Connect *Client1;
 extern int AccessLevel;
 
 bool connectedFlag = false;
-
-enum AccessType{
-    Guest,
-    User,
-    Admin
-};
-
 
 
 IP_controlPanel::IP_controlPanel(QWidget *parent,Ui::MainWindow *m_ui):

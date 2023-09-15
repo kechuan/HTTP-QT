@@ -308,7 +308,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     //目标运动结束后的相对位置 在Qpoint里默认以左上角为起始地址计算
     QPoint TargetRelButtonPos = QPoint(159,12);
-    QPoint TargetRelLabelPos = QPoint(235,9);
+    QPoint TargetRelLabelPos = QPoint(235,11);
 
     //相对位置转化为绝对目标位置 相对->绝对
     QPoint TargetAbsThreadButtonPos = pushButton_MaxThreadCount->mapToParent(TargetRelButtonPos);
@@ -421,8 +421,8 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
     QMenu *FileList_popmenu = new QMenu;
 
     //Guest
-    QAction *Refresh = new QAction("Refresh");
     QAction *Open;
+    QAction *Refresh = new QAction("Refresh");
     QAction *Download;
 
     //User
@@ -440,7 +440,13 @@ bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
     FileList_popmenu->addAction(Rename);
     FileList_popmenu->addAction(Upload);
 
-    if(parentPath == rootPath) Refresh->setEnabled(false); //不要在磁盘界面选择刷新
+    if(SurfingPath == rootPath){
+        Refresh->setEnabled(false); //不要在磁盘界面选择刷新
+    }
+
+    else{
+        Refresh->setEnabled(true);
+    }
 
     //signal Trigger add.
     QObject::connect(Refresh,&QAction::triggered,this,&MainWindow::Refresh);   
@@ -599,10 +605,8 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
                 }
 
                 //重复下载确认区域
-                QTreeWidget *treeWidgetTaskQueue = DockWidget->ui->treeWidgetTaskQueue;
-                QList matchList = treeWidgetTaskQueue->findItems(Item->text(nameList),Qt::MatchExactly,0);
-
-                qDebug("Item->text(nameList):%s,treeWidgetTaskQueue text:%s",treeWidgetTaskQueue->topLevelItem(0)->text(0).toStdString().c_str(),Item->text(nameList).toStdString().c_str());
+                QTreeWidget *TaskQueue = DockWidget->ui->treeWidgetTaskQueue;
+                QList matchList = TaskQueue->findItems(Item->text(nameList),Qt::MatchExactly,TasknameList);
 
                 if (!matchList.empty()){
                     QMessageBox ReDownloadPrompt;
@@ -756,24 +760,29 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
        HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector,TypeVector);
 
        if(PathVector.size()>1){
-
             /*
              *  D:
              *  D:/Downloads         index:-2
                 D:/Downloads/xxx.jpg .back() = index.last()
             */
 
-            qDebug("上一级Path:%s",PathVector.at(PathVector.size()-2).c_str());
             parentPath = PathVector.at(PathVector.size()-2).c_str();
             SurfingPath = PathVector.back().c_str();
+            qDebug("当前Path:%s,上一级Path:%s",SurfingPath.toStdString().c_str(),parentPath.toStdString().c_str());
         }
 
         else{
             qDebug("上一级Path:/files");
             parentPath = rootPath;
-        }
 
-        // qDebug("%s",Information.c_str());
+            if(PathVector.front()!="/files"){
+                qDebug("vector size:1, but the surfing path is not '/files'.");
+                SurfingPath = PathVector.front().c_str();
+                qDebug("Now the parentPath is:%s, the Surfingpath Path is:%s.",parentPath.toStdString().c_str(),SurfingPath.toStdString().c_str());
+
+            }
+
+        }
 
         //Filelist update part.
         SurfingFile->clear();
@@ -797,7 +806,7 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
             SurfingFile->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
             if(!NameVector.size()){
-                qDebug("empty File Open");
+                qDebug("empty Dir Open");
             }
 
             else{
@@ -805,23 +814,8 @@ void MainWindow::itemAccess(QTreeWidgetItem *listItem){
                     QList<QString> newItemInformation{"",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
                     QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
                     SurfingFile->addTopLevelItem(newItem);
-
                     SurfingFile->renderIcon(TypeVector.at(index));
 
-//                    auto RenderIcon = [=](const char *svgAdress){
-//                        SurfingFile->topLevelItem(SurfingFile->topLevelItemCount()-1)->setData(iconList, Qt::DecorationRole,QIcon(svgAdress).pixmap(QSize(26,26)));
-//                    };
-
-//                    switch(TypeVector.at(index)){
-//                        case Dir: RenderIcon(R"(:/svgPack/TypePack/icon-Dir.svg)"); break;
-//                        case Text: RenderIcon(R"(:/svgPack/TypePack/icon-Text.svg)"); break;
-//                        case Image: RenderIcon(R"(:/svgPack/TypePack/icon-Image.svg)"); break;
-//                        case Video: RenderIcon(R"(:/svgPack/TypePack/icon-Video.svg)"); break;
-//                        case Music: RenderIcon(R"(:/svgPack/TypePack/icon-Music.svg)"); break;
-//                        case Compress: RenderIcon(R"(:/svgPack/TypePack/icon-Compress.svg)"); break;
-//                        case Code: RenderIcon(R"(:/svgPack/TypePack/icon-Code.svg)"); break;
-//                        case Unknown: RenderIcon(R"(:/svgPack/TypePack/icon-Unknown.svg)"); break;
-//                    }
                 }
             }
 
@@ -923,7 +917,7 @@ void MainWindow::Delete(){
 
 void MainWindow::Refresh(){
     SurfingFile->clear();
-    qDebug("Surfingpath: %s",SurfingPath.toStdString().c_str());
+    qDebug("Surfingpath: %s parentPath:%s",SurfingPath.toStdString().c_str(),parentPath.toStdString().c_str());
     QList<QString> newItemInformation{"-","..","—",parentPath};
     SurfingFile->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
 
@@ -931,12 +925,20 @@ void MainWindow::Refresh(){
 
     HTMLExtract(Information,LinkVector,PathVector,NameVector,SizeVector,TypeVector);
 
-    for(int index = 0;index<=SizeVector.size()-1;++index){
-        QList<QString> newItemInformation{"",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
-        QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
-        SurfingFile->addTopLevelItem(newItem);
-        SurfingFile->renderIcon(TypeVector.at(index));
+    if(!NameVector.size()){
+        qDebug("empty Dir Open");
     }
+
+    else{
+        for(int index = 0;index<=SizeVector.size()-1;++index){
+            QList<QString> newItemInformation{"",NameVector.at(index).c_str(),SizeVector.at(index).c_str(),LinkVector.at(index).c_str()};
+            QTreeWidgetItem *newItem = new QTreeWidgetItem(newItemInformation);
+            SurfingFile->addTopLevelItem(newItem);
+            SurfingFile->renderIcon(TypeVector.at(index));
+        }
+
+    }
+
 
 }
 

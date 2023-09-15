@@ -23,7 +23,7 @@ enum ResourceType{
 
 //propList
 enum QueueList{
-    FilenameList,
+    TasknameList,
     ProgressList,
     SizeList,
     SpeedList,

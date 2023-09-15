@@ -143,14 +143,14 @@ PropertiesWidget::PropertiesWidget(QWidget *parent,Ui::MainWindow *m_ui) :
 
             for(int TaskIndex = 0;TaskIndex<PropTaskCount;TaskIndex++){
                 currentTask = treeWidgetTaskQueue->topLevelItem(TaskIndex);
-                QVariant StatusFlag = currentTask->data(FilenameList,Qt::UserRole).toInt();
+                QVariant StatusFlag = currentTask->data(TasknameList,Qt::UserRole).toInt();
 
                 bool ActiveStatus = StatusFlag!=Paused&&StatusFlag!=Finished;
 
                 //Active Status
                 if(ActiveStatus){
                     std::string SpeedText = currentTask->text(SpeedList).toStdString();
-                    qDebug("currentTask Name:%s,itemSpeed:%s",currentTask->text(FilenameList).toStdString().c_str(),currentTask->text(SpeedList).toStdString().c_str());
+                    qDebug("currentTask Name:%s,itemSpeed:%s",currentTask->text(TasknameList).toStdString().c_str(),currentTask->text(SpeedList).toStdString().c_str());
 
                     SpeedCount+=StringToSize(SpeedText);
                     DownloadingStatus = true; //只要有任一一项还在活跃的任务 监控继续
@@ -215,7 +215,7 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem){
 
         //ActiveStatus
 
-        QVariant Status = listItem->data(FilenameList,Qt::UserRole);
+        QVariant Status = listItem->data(TasknameList,Qt::UserRole);
 
 
 
@@ -310,7 +310,7 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTaskList){
         Text.append("\n");
 
         for(auto currentFileName:selectedTaskList){
-            Text.append(currentFileName->text(FilenameList).toStdString());
+            Text.append(currentFileName->text(TasknameList).toStdString());
             Text.append("\n");
         }
 
@@ -362,7 +362,7 @@ void PropertiesWidget::deletePrompt(QList<QTreeWidgetItem*> selectedTaskList){
 
 
 
-            QString FullPath = CurrentItem->text(StoragePathList)+CurrentItem->text(FilenameList);
+            QString FullPath = CurrentItem->text(StoragePathList)+CurrentItem->text(TasknameList);
             //correctWay delete u8
             qDebug("deletePath:%s",FullPath.toStdString().c_str());
             std::filesystem::remove(std::filesystem::u8path(FullPath.toStdString().c_str()));
@@ -425,7 +425,7 @@ void PropertiesWidget::clearStatusList(){
 void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
 
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
-    QList matchList = treeWidgetTaskQueue->findItems(Item->text(1),Qt::MatchExactly,FilenameList);
+    QList matchList = treeWidgetTaskQueue->findItems(Item->text(1),Qt::MatchExactly,TasknameList);
 
     //已存在时 跳过创建
     if (!matchList.empty()){
@@ -440,9 +440,9 @@ void PropertiesWidget::ProgressCreate(QTreeWidgetItem* Item){
     treeWidgetTaskQueue->addTopLevelItem(new QTreeWidgetItem(newItemInformation));
     treeWidgetTaskQueue->setItemDelegateForColumn(ProgressList, progressBar);
 
-    treeWidgetTaskQueue->topLevelItem(treeWidgetTaskQueue->topLevelItemCount()-1)->setTextAlignment(FilenameList,Qt::AlignVCenter);
-    treeWidgetTaskQueue->topLevelItem(treeWidgetTaskQueue->topLevelItemCount()-1)->setData(FilenameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Pending.svg"));
-    treeWidgetTaskQueue->topLevelItem(treeWidgetTaskQueue->topLevelItemCount()-1)->setData(FilenameList, Qt::UserRole, Pending);
+    treeWidgetTaskQueue->topLevelItem(treeWidgetTaskQueue->topLevelItemCount()-1)->setTextAlignment(TasknameList,Qt::AlignVCenter);
+    treeWidgetTaskQueue->topLevelItem(treeWidgetTaskQueue->topLevelItemCount()-1)->setData(TasknameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Pending.svg"));
+    treeWidgetTaskQueue->topLevelItem(treeWidgetTaskQueue->topLevelItemCount()-1)->setData(TasknameList, Qt::UserRole, Pending);
 
 }
 
@@ -451,7 +451,7 @@ void PropertiesWidget::ProgressUpdate(const QString& itemName,const float& Progr
     qDebug() << "from thread slot:" << QThread::currentThreadId();
 
     QTreeWidget *treeWidgetTaskQueue = ui->treeWidgetTaskQueue;
-    QList matchList = treeWidgetTaskQueue->findItems(itemName,Qt::MatchExactly,FilenameList);
+    QList matchList = treeWidgetTaskQueue->findItems(itemName,Qt::MatchExactly,TasknameList);
 
     QTreeWidgetItem *currentItem = matchList.at(0);
 
@@ -476,21 +476,21 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 
     switch(Status){
         case Downloading: {
-            listItem->setData(FilenameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Downloading.svg").pixmap(QSize(20,20))); //数据更新
-            listItem->setData(FilenameList, Qt::UserRole, Downloading);
+            listItem->setData(TasknameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Downloading.svg").pixmap(QSize(20,20))); //数据更新
+            listItem->setData(TasknameList, Qt::UserRole, Downloading);
             emit TaskContinue(listItem);
             break;
         }
 
         case Uploading: {
-            listItem->setText(FilenameList,"Uploading"); break;
+            listItem->setText(TasknameList,"Uploading"); break;
         }
 
         case Paused: {
             emit TaskPaused(listItem);
             listItem->setText(SpeedList,"—");
-            listItem->setData(FilenameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-PauseStatus.svg").pixmap(QSize(20,20))); //数据更新
-            listItem->setData(FilenameList, Qt::UserRole, Paused);
+            listItem->setData(TasknameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-PauseStatus.svg").pixmap(QSize(20,20))); //数据更新
+            listItem->setData(TasknameList, Qt::UserRole, Paused);
 
             break;
 
@@ -499,13 +499,13 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
         }
 
         case Failed: {
-            listItem->setText(FilenameList,"Failed"); break;
+            listItem->setText(TasknameList,"Failed"); break;
         }
 
         case Finished:{
-            qDebug("listItem:%s Status change. Status Code: %d",listItem->text(FilenameList).toStdString().c_str(),Status);
-            listItem->setData(FilenameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Completed.svg").pixmap(QSize(20,20))); //数据更新
-            listItem->setData(FilenameList, Qt::UserRole, Finished);
+            qDebug("listItem:%s Status change. Status Code: %d",listItem->text(TasknameList).toStdString().c_str(),Status);
+            listItem->setData(TasknameList, Qt::DecorationRole, QIcon(":/svgPack/StatusPack/icon-Completed.svg").pixmap(QSize(20,20))); //数据更新
+            listItem->setData(TasknameList, Qt::UserRole, Finished);
             listItem->setText(DateTimeList,QTime::currentTime().toString());
 
             break;
@@ -518,7 +518,7 @@ void PropertiesWidget::StatusChanged(int Status,QTreeWidgetItem* listItem){
 //Slot:
 
 void PropertiesWidget::OpenFile(QTreeWidgetItem* listItem){
-    QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(StoragePathList)+listItem->text(FilenameList))));
+    QDesktopServices::openUrl(QUrl(QUrl::fromLocalFile(listItem->text(StoragePathList)+listItem->text(TasknameList))));
 }
 
 void PropertiesWidget::OpenFileFromFolder(QTreeWidgetItem* listItem){
@@ -540,7 +540,7 @@ void PropertiesWidget::ActionPressed(){
 
     if(button->objectName() == "pushButton_Continue"){
         for(auto& listItem:selectedTaskList){
-            if(listItem->data(FilenameList,Qt::UserRole) == Finished) continue;
+            if(listItem->data(TasknameList,Qt::UserRole) == Finished) continue;
             StatusChanged(Downloading,listItem);
         }
         return;

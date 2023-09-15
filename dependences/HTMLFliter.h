@@ -16,9 +16,6 @@ inline std::regex HTMLExtReg(R"(\.+(.*)$)");
 inline std::regex MenuContentMatch(R"(<ul>+(.*?)+</ul>)");                                                      //target group0
 inline std::regex list(R"(<div\s*id=\"list\">)");
 
-//inline std::regex fileslistSegments(R"(<ul\s*id='fileslist'>.*?</ul>)"); //catchGroup 1
-//inline std::regex HTMLTypeFliter(R"(<use\sxlink:href="#ext-(\w+)[^>])"); //catchGroup 1
-
 inline std::smatch matches;
 
 inline int TypeJudge(std::string& FileNameSuffix){
@@ -78,10 +75,12 @@ inline std::string HTMLFliter(std::string &Information,std::vector<std::string> 
         MenuContent+=matches[0]; //matches[0] 代表find到的所有东西 同时在新字符串内增加内容 从而实现匹配内容的转移
     }
 
+//    qDebug("MenuContent:%s",MenuContent.c_str());
+
     copy_template(MenuContent,HTMLLinkReg,1,PathVector);
 
-    // qDebug("Path.size():%zu\n",PathVector.size());
-    // for(auto &Path:PathVector) qDebug("Path:%s\n",Path.c_str());
+//    qDebug("Path.size():%zu\n",PathVector.size());
+//    for(auto &Path:PathVector) qDebug("Path:%s\n",Path.c_str());
 
     while (std::regex_search(tempString, matches, list)) {    //仅修剪
         tempString = matches.suffix(); //命中之后就把命中内容从string修剪掉 这里指代<div id="list">开始之外的所有内容
@@ -136,8 +135,9 @@ inline void HTMLExtract(std::string &Information,std::vector<std::string> &LinkV
         TypeVector.emplace_back(Dir);
     }
 
+    for(auto &Path:PathVector) qDebug("Path:%s\n",Path.c_str());
+
     for(auto &Type:EXTVector){
-//        qDebug("Type:%s",Type.c_str());
         TypeVector.emplace_back(TypeJudge(Type));
     }
 

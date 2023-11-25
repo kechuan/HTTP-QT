@@ -4,6 +4,7 @@
 
 #include "connect.h"
 #include "FileList.h"
+#include "./dependences/enumIndex.h"
 
 #include <QPropertyAnimation>
 #include <QGraphicsOpacityEffect>
@@ -13,12 +14,6 @@
 extern Connect *Client1;
 extern FileList *SurfingFile;
 extern PropertiesWidget *DockWidget;
-
-enum TaskStatus{
-    Completed,
-    Paused,
-    Canceled
-};
 
 Toaster::Toaster(QWidget *parent,Ui::MainWindow *m_ui) :
     QWidget(parent),
@@ -85,7 +80,7 @@ void Toaster::DownloadToaster(const QString& FileName,const int& status){
         }
 
         switch(status){
-            case Completed:{
+            case TaskCompleted:{
                 pushButton_navBar->setStyleSheet(
                     R"(
                         border-radius:15px;
@@ -100,7 +95,7 @@ void Toaster::DownloadToaster(const QString& FileName,const int& status){
                 break;
             };
 
-            case Paused:{
+            case TaskPaused:{
                 pushButton_navBar->setStyleSheet(
                     R"(
                         border-radius:15px;
@@ -115,7 +110,7 @@ void Toaster::DownloadToaster(const QString& FileName,const int& status){
                 break;
             };
 
-            case Canceled:{
+            case TaskCanceled:{
                 pushButton_navBar->setStyleSheet(
                     R"(
                         border-radius:15px;

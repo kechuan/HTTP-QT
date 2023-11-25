@@ -37,7 +37,7 @@ signals:
     void TaskPaused(QTreeWidgetItem *TaskItem);
     void TaskContinue(QTreeWidgetItem *TaskItem);
     void TaskCancel(QTreeWidgetItem *TaskItem);
-    void TaskSpeedLimit(QTreeWidgetItem *TaskItem,int &BufferLength,char &millonSeconds);
+    void TaskSpeedLimit(QTreeWidgetItem *TaskItem,unsigned int &speedLimit);
     void TaskLimitSpeedCancel(QTreeWidgetItem *TaskItem);
 
 public slots:

@@ -46,7 +46,7 @@ QString rootPath = "/file";
 QString SurfingPath;
 QString parentPath;
 
-std::string storagePath = std::filesystem::current_path().string();
+std::string storagePath = std::filesystem::current_path().string().append(R"(\downloads\)");
 
 bool m_status = false;
 int AccessLevel = Guest;
@@ -55,10 +55,10 @@ short SplitterRecord;
 extern bool connectedFlag;
 
 //全局对象 创立
-Connect *Client1;
-FileList *SurfingFile;
-PropertiesWidget *DockWidget;
-IP_controlPanel *IP_controlPanelWindow;
+Connect *Client1 = nullptr;
+FileList *SurfingFile = nullptr;
+PropertiesWidget *DockWidget = nullptr;
+IP_controlPanel *IP_controlPanelWindow = nullptr;
 
 QList<QTreeWidgetItem*> selectedFileList;
 
@@ -81,14 +81,11 @@ MainWindow::MainWindow(QWidget *parent)
     QTimer::singleShot(800,this,[&](){qDebug()<<"IP_show ID:"<<QThread::currentThreadId();IP_controlPanelWindow->show();});
 
     SurfingFile = new FileList(ui->widget_FileList); //构造阶段时 已经为SurfingFile 分配好内存地址
-    storagePath.append(R"(\downloads\)");
 
     QSplitter *FileShare_Splitter = ui->PropTools;
 
     //inital FileList/TaskQueue
 
-    qDebug("FileShare_Splitter width:%d",FileShare_Splitter->size().width());
-    qDebug("FileShare_Splitter Height:%d",FileShare_Splitter->size().height());
 
     ui->widget_FileList->resize(908,517);
     SurfingFile->resize(908,517);
@@ -129,7 +126,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     //Declaration
 
-    PlaceHolderText.insert(0,"Default Path:");
+    PlaceHolderText.insert(0,"Default Path:"); //0 => Column 0
     PlaceHolderText.append("\\downloads");
 
     storagePathInput->setPlaceholderText(QString::fromStdString(std::move(PlaceHolderText)));
@@ -193,10 +190,10 @@ MainWindow::MainWindow(QWidget *parent)
         );
 
         if(!storagePathInputSelect.isEmpty()){
-            //storagePathInputSelect 选择出来的路径是 file:/// 因此需要手动擦除一下
-            std::string SplitPath = storagePathInputSelect.toString().toStdString().erase(0,8);
+            //storagePathInputSelect 选择出来的路径是 file:/// 因此需要手动擦除一下 最后再追加一个/ 末尾
+            std::string SplitPath = storagePathInputSelect.toString().toStdString().erase(0,8).append("/");
             storagePath = SplitPath;
-            storagePath.append("/");
+
             storagePathInput->clear();
             storagePathInput->insert(QString::fromStdString(storagePath));
         }
@@ -412,7 +409,7 @@ qapplication
 bool MainWindow::FileList_Menu(QTreeWidgetItem *listItem){
     //那么其逻辑实际上等于 treewidgetitem作用域+右键判断
     if(qApp->mouseButtons() != Qt::RightButton) return false;
-    if(!connectedFlag) return false; //未获取目录信息前直接抛出
+    if(!connectedFlag) return false; //非连接状态时 直接抛出
 
     qDebug()<<"right triggered";
 
@@ -1047,10 +1044,10 @@ void MainWindow::resizeEvent(QResizeEvent *resizeEvent){
 
 //快捷键定义区
 
-void MainWindow::keyPressEvent(QKeyEvent *event){
+void MainWindow::keyPressEvent(QKeyEvent *keyEvent){
     QList<QTreeWidgetItem*> selectedTreeWidgetItems = SurfingFile->selectedItems();
 
-    switch(event->key()){
+    switch(keyEvent->key()){
         case Qt::Key_Return:
         case Qt::Key_Enter:
         {

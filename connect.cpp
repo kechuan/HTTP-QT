@@ -153,8 +153,8 @@ void Connect::cliFileDownload(const QString& itemName,const QString& itemSize,co
     bool isCanceled = false;
     bool isLimited = false;
 
-    int LimitedBuffer;
-    char delayms;
+    
+    unsigned int speedLimitperSecond = 0;
 
     std::mutex Download_mtx;
     std::condition_variable Download_cv;
@@ -186,12 +186,11 @@ void Connect::cliFileDownload(const QString& itemName,const QString& itemSize,co
     });
 
 
-    QObject::connect(DockWidget,&PropertiesWidget::TaskSpeedLimit,this,[&](QTreeWidgetItem *TaskItem,int &bufferLength,char &ms){
+    QObject::connect(DockWidget,&PropertiesWidget::TaskSpeedLimit,this,[&](QTreeWidgetItem *TaskItem,unsigned int speedLimit){
         if(TaskItem->text(0) == itemName){
             std::unique_lock<std::mutex> Downloadlock(Download_mtx);
             isLimited = true;
-            LimitedBuffer = bufferLength;
-            delayms = ms;
+            speedLimitperSecond = speedLimit;
 
         }
     });
@@ -213,9 +212,25 @@ void Connect::cliFileDownload(const QString& itemName,const QString& itemSize,co
          */
 
         if(isLimited){
-            buffer_length = LimitedBuffer;
-            std::this_thread::sleep_for(std::chrono::milliseconds(delayms));
-            //3072,1ms => 100KB/s
+
+            if(speedLimitperSecond == 0){
+                //保险
+            }
+
+            else{
+                qDebug("SpeedValue:%f MB/s speedLimitperSecond:%d KB/s, paused it %f ms",SpeedValue,speedLimitperSecond,(SpeedValue/speedLimitperSecond));
+                std::this_thread::sleep_for(
+                    std::chrono::milliseconds(
+                        static_cast<int>((SpeedValue)/(speedLimitperSecond)*36) //2 => 64
+                        //SpeedValue 原本是MB 单位 speedLimitperSecond是 KB单位
+                        //但是因为用的是milliseonds 所以可以视作为同等单位
+                        //至于36这个数值... 唉 毕竟不是精准的流控法 我估计换个平台 估计就不准了
+                        //速度还会一直在 低 中 高的范围波动 大概意思是撞墙往复循环
+                    )
+                );
+            }
+
+
         }
 
 
@@ -250,7 +265,7 @@ void Connect::cliFileDownload(const QString& itemName,const QString& itemSize,co
             CompletedSize = static_cast<int>(sizeDetected.tellg());
             sizeDetected.close();
 
-            FProgress = (CompletedSize/fliterSize)*100;
+            FProgress = (CompletedSize/fliterSize)*100; //0.XXX => XX.X%
 
             //inital Speed
             if(!RecordProgress){
@@ -263,6 +278,8 @@ void Connect::cliFileDownload(const QString& itemName,const QString& itemSize,co
                 ProgressResidual = (FProgress - RecordProgress)/100;
                 RecordProgress += FProgress - RecordProgress;
                 SpeedValue = ProgressResidual*fliterSize;
+                //temp
+                qDebug("Speed value:%f",SpeedValue); //本地运行 大约。。100MB/s这样子
             }
 
             QString itemSpeed = QString::fromStdString(SizeToString(SpeedValue));

@@ -30,7 +30,7 @@ public:
     // void dropEvent(QDropEvent* dropEvent);
     // void dragLeaveEvent(QDragLeaveEvent *dragLeaveEvent);
     // void mousePressEvent(QMouseEvent *mousePressEvent);
-    void keyPressEvent(QKeyEvent *event);
+    void keyPressEvent(QKeyEvent *keyEvent);
 
 
     void Upload(); //需求FileDialog补充信息

@@ -17,7 +17,7 @@
 int PropTaskCount;
 double SpeedCount;
 
-speedLimitPanel *speedLimitDialog;
+speedLimitPanel *speedLimitDialog = nullptr;
 extern Connect *Client1;
 extern std::string storagePath;
 extern QString parentPath;
@@ -257,9 +257,9 @@ bool PropertiesWidget::TaskList_Menu(QTreeWidgetItem *listItem){
             speedLimitDialog = new speedLimitPanel(nullptr);
             speedLimitDialog->exec();
 
-            if(!speedLimitDialog->BufferLength&&!speedLimitDialog->delayms) return;
+            if(!speedLimitDialog->speedLimit) return;
 
-            emit TaskSpeedLimit(listItem,speedLimitDialog->BufferLength,speedLimitDialog->delayms);
+            emit TaskSpeedLimit(listItem,speedLimitDialog->speedLimit);
 
         });
 

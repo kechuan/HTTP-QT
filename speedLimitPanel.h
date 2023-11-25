@@ -15,8 +15,7 @@ public:
     explicit speedLimitPanel(QWidget *parent = nullptr);
     ~speedLimitPanel();
 
-    int BufferLength;
-    char delayms;
+    unsigned int speedLimit;
 
 
 private:
